@@ -1,18 +1,23 @@
 """Interactive basin map with hover tooltips, for the statewide screening tab.
 
 Rendered with pydeck, which ships with Streamlit, so this adds no dependency and
-needs no API key. The basemap is CARTO's free raster tile service.
+needs no API key. Two independent sources of geography, deliberately:
+
+1. The CARTO vector basemap, via pydeck's keyless `carto` provider, which gives
+   city, road, river, and coastline labels.
+2. A vendored Texas state outline drawn as a deck layer (data/geo/). The basemap
+   needs network access and a working WebGL tile renderer; this polygon is part of
+   the deck itself, so the map still reads as Texas when tiles do not arrive.
 
 WHY NOT GOOGLE MAPS: the Google Maps JavaScript API requires a billed API key,
 which cannot be committed to a public repository, and it would make the dashboard
 fail closed for anyone cloning the repo. Nothing here needs Google's routing,
-places, or Street View data; the requirement is "show me where these basins are
-and let me hover one", which an open basemap satisfies. If a deployment needs
-Google specifically, the tile URL below is the single line to change.
+places, or Street View data.
 
 WHAT THE MARKERS MEAN: each basin is a point at a hand-placed visual anchor, not
 a filled watershed polygon, because this repository has not delineated basin
-boundaries. Radius encodes the Capture Index. See config/geography.yaml.
+boundaries. Radius encodes the Capture Index, NOT basin size. See
+config/geography.yaml.
 """
 
 from __future__ import annotations
@@ -23,19 +28,47 @@ import pandas as pd
 import pydeck as pdk
 
 from twr.capture_index import FLAG_COLORS
-from twr.geo import Geography
+from twr.geo import Geography, load_texas_outline
 
-# CARTO Voyager. Light and low-chroma, so the flag colours stay readable, but it
-# still labels cities and rivers, which is what makes the map orienting.
-BASEMAP_URL = "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
+# CARTO's vector basemap, served through pydeck's `carto` provider, which needs no
+# access token. Voyager labels cities, roads, and rivers, which is what makes the
+# map orienting rather than decorative.
+#
+# Do NOT try to serve the basemap as a hand-rolled TileLayer with
+# `map_provider=None`. That path leaves pydeck's mapStyle as the literal
+# placeholder "__MAP_STYLE__", the base render surface never initialises, and the
+# tiles silently never paint: you get scatterplot dots floating on the page
+# background with no error anywhere. The deck still renders, the HTML still
+# contains the tile URL, and the log stays clean, so it passes every check short
+# of actually looking at the map.
+BASEMAP_PROVIDER = "carto"
 BASEMAP_ATTRIBUTION = "Basemap (c) OpenStreetMap contributors, (c) CARTO"
+
+# The dashboard runs on Streamlit's dark theme, so the basemap is the dark CARTO
+# style. Voyager (CARTO_ROAD) is light and reads as a bright rectangle pasted into
+# a dark page. Dark Matter keeps city, road, and coastline labels while letting the
+# flag colours stay the brightest thing on the map.
+BASEMAP_STYLE = pdk.map_styles.CARTO_DARK
 
 # Point radius in metres. A Capture Index of 0 still has to be visible and
 # hoverable, hence the floor.
 MIN_RADIUS_M = 16_000
 MAX_RADIUS_M = 62_000
 
-SITE_COLOR = [17, 24, 39]
+# Decision units, drawn on a dark basemap: a near-white pin with a dark ring, so
+# it stays legible against both land and water without competing with the flags.
+SITE_COLOR = [245, 245, 245]
+SITE_LINE_COLOR = [17, 24, 39, 220]
+SITE_TEXT_COLOR = [255, 255, 255, 255]
+SITE_TEXT_OUTLINE = [0, 0, 0, 255]
+MARKER_LINE_COLOR = [255, 255, 255, 200]
+# Texas itself: a faint landmass wash with a clear edge, so the state reads as a
+# shape without competing with the flag colours on top of it.
+STATE_FILL_COLOR = [70, 90, 115, 60]
+STATE_LINE_COLOR = [150, 180, 210, 190]
+
+COAST_LINE_COLOR = [96, 165, 250, 170]
+COAST_POINT_COLOR = [96, 165, 250, 220]
 
 
 def _hex_to_rgb(value: str) -> list[int]:
@@ -196,16 +229,27 @@ def basin_map(
     if frame.empty:
         return None, 0
 
-    layers = [
-        pdk.Layer(
-            "TileLayer",
-            data=BASEMAP_URL,
-            min_zoom=0,
-            max_zoom=19,
-            tile_size=256,
-            opacity=1.0,
+    layers: list[pdk.Layer] = []
+
+    # Texas itself, drawn from vendored real geometry rather than relying on the
+    # basemap. Tiles need network access and a working WebGL tile renderer; this
+    # polygon is part of the deck, so the map still reads as Texas (and its Gulf
+    # coast) when they are unavailable.
+    outline = load_texas_outline()
+    if outline:
+        layers.append(
+            pdk.Layer(
+                "PolygonLayer",
+                data=[{"polygon": ring} for ring in outline],
+                get_polygon="polygon",
+                get_fill_color=STATE_FILL_COLOR,
+                get_line_color=STATE_LINE_COLOR,
+                line_width_min_pixels=1.5,
+                stroked=True,
+                filled=True,
+                pickable=False,
+            )
         )
-    ]
 
     if highlight_coastal:
         coastal = frame[frame["reaches_coast"]]
@@ -218,7 +262,7 @@ def basin_map(
                     data=coastal,
                     get_source_position="[lon, lat]",
                     get_target_position="[outlet_lon, outlet_lat]",
-                    get_color=[37, 99, 235, 130],
+                    get_color=COAST_LINE_COLOR,
                     get_width=2,
                     pickable=False,
                 )
@@ -228,7 +272,7 @@ def basin_map(
                     "ScatterplotLayer",
                     data=coastal,
                     get_position="[outlet_lon, outlet_lat]",
-                    get_fill_color=[37, 99, 235, 200],
+                    get_fill_color=COAST_POINT_COLOR,
                     get_radius=9_000,
                     pickable=False,
                 )
@@ -244,7 +288,7 @@ def basin_map(
             radius_min_pixels=6,
             radius_max_pixels=90,
             stroked=True,
-            get_line_color=[255, 255, 255, 235],
+            get_line_color=MARKER_LINE_COLOR,
             line_width_min_pixels=1.5,
             opacity=0.82,
             pickable=True,
@@ -264,7 +308,7 @@ def basin_map(
                 get_radius=6_500,
                 radius_min_pixels=4,
                 stroked=True,
-                get_line_color=[255, 255, 255, 255],
+                get_line_color=SITE_LINE_COLOR,
                 line_width_min_pixels=1.5,
                 pickable=True,
                 auto_highlight=True,
@@ -277,13 +321,13 @@ def basin_map(
                 get_position="[lon, lat]",
                 get_text="label",
                 get_size=11,
-                get_color=[17, 24, 39, 255],
+                get_color=SITE_TEXT_COLOR,
                 get_pixel_offset=[0, -16],
                 get_text_anchor="'middle'",
                 get_alignment_baseline="'bottom'",
                 font_family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 outline_width=3,
-                outline_color=[255, 255, 255, 255],
+                outline_color=SITE_TEXT_OUTLINE,
                 font_settings={"sdf": True},
                 pickable=False,
             )
@@ -297,6 +341,7 @@ def basin_map(
             zoom=geography.view.zoom,
         ),
         tooltip={"html": TOOLTIP_HTML, "style": TOOLTIP_STYLE},
-        map_provider=None,
+        map_provider=BASEMAP_PROVIDER,
+        map_style=BASEMAP_STYLE,
     )
     return deck, len(frame)

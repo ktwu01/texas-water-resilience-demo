@@ -100,10 +100,17 @@ replace the point anchors with:
 - gauge coordinates from USGS NWIS site metadata, once `usgs_site_no` is
   populated in `config/basins.yaml`.
 
-The dashboard basemap is the open CARTO raster tile service over OpenStreetMap
-data, chosen because it needs no API key and so cannot break for a fresh clone.
-Attribution is rendered under the map. A Google Maps basemap would require a
-billed API key, which does not belong in a public repository.
+The dashboard basemap is CARTO's vector style over OpenStreetMap data, served
+through pydeck's keyless `carto` provider, chosen because it needs no API key and
+so cannot break for a fresh clone. Attribution is rendered under the map. A Google
+Maps basemap would require a billed API key, which does not belong in a public
+repository.
+
+The map does not depend on those tiles alone. `data/geo/texas_state.geojson` is a
+vendored, generalised Texas state boundary (US Census cartographic boundary,
+public domain, ~150 vertices) drawn as a deck layer, so the state and its Gulf
+coast are visible even when tiles are blocked by a proxy or the client cannot
+render them. Provenance is recorded in a `_provenance` key inside the file.
 
 ## Partner scales
 

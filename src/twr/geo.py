@@ -10,10 +10,15 @@ provenance rules and for what a real deployment must replace them with.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
-from .config import CONFIG_DIR, read_yaml
+from .config import CONFIG_DIR, DATA_DIR, read_yaml
+
+# Vendored Texas state outline. Real geometry, generalised for display, with its
+# provenance recorded inside the file. See load_texas_outline.
+TEXAS_OUTLINE_PATH = DATA_DIR / "geo" / "texas_state.geojson"
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,36 @@ class Geography:
         return tuple(
             basin_id for basin_id, geom in self.basins.items() if geom.reaches_coast
         )
+
+
+def load_texas_outline(path: Path | None = None) -> list[list[list[float]]]:
+    """Texas state boundary as a list of [lon, lat] rings.
+
+    This is real geometry (US Census cartographic boundary, public domain), not a
+    synthetic shape, and it is generalised for display: roughly 150 vertices for
+    the whole state, with a simplified Gulf coastline. It exists so the map shows
+    recognisable Texas even where the basemap tiles are unavailable, which is the
+    common case behind a corporate proxy or on a machine with no WebGL-accelerated
+    tile rendering.
+
+    Do not measure anything from it, and do not mistake it for a watershed
+    delineation. Returns an empty list if the file is absent, so the map degrades
+    to markers rather than failing.
+    """
+    target = path or TEXAS_OUTLINE_PATH
+    if not target.exists():
+        return []
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    rings: list[list[list[float]]] = []
+    for feature in payload.get("features", []):
+        geometry = feature.get("geometry", {})
+        kind = geometry.get("type")
+        if kind == "Polygon":
+            rings.extend(geometry["coordinates"])
+        elif kind == "MultiPolygon":
+            for polygon in geometry["coordinates"]:
+                rings.extend(polygon)
+    return rings
 
 
 def _point(raw: dict[str, float]) -> Point:

@@ -100,7 +100,7 @@ def show_basin_map(statewide: pd.DataFrame) -> None:
         st.info("No basin geometry matched the screening output.")
         return
 
-    st.pydeck_chart(deck, use_container_width=True)
+    st.pydeck_chart(deck, use_container_width=True, height=520)
     caption = (
         "Hover a basin for its Capture Index, excess volume, and binding constraint. "
         "Marker size scales with the Capture Index; colour is the flag. Dark markers "

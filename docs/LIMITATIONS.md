@@ -109,6 +109,10 @@ still not a geospatial product.
   watershed. A filled outline would look authoritative and would be invented.
   Replace with USGS Watershed Boundary Dataset HUC polygons and TWDB major river
   basin shapefiles before showing this to anyone who works in GIS.
+- **The one real polygon is the state outline** in `data/geo/texas_state.geojson`,
+  a generalised US Census cartographic boundary (~150 vertices, public domain). It
+  is there so the map reads as Texas even when basemap tiles do not load. Its Gulf
+  coastline is simplified and nothing should be measured from it.
 - **`centroid` is a hand-placed visual anchor**, not a computed area centroid,
   and it is not the gauge location either. Nothing in the model uses it; it only
   decides where a marker lands.

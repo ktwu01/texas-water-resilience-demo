@@ -30,11 +30,12 @@
 
 provenance: approximate_public_geography
 
-# Bounding box for the initial camera, in degrees. Texas plus a Gulf margin.
+# Initial camera, in degrees. Centred so the state and its Gulf coast both sit in
+# frame; the anchors span roughly 25.9-33.6 N and 101.5-95.4 W.
 view:
-  latitude: 31.2
-  longitude: -99.3
-  zoom: 4.7
+  latitude: 30.6
+  longitude: -98.5
+  zoom: 5.4
 
 basins:
   - id: brazos

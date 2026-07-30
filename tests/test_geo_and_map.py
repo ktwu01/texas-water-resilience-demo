@@ -37,7 +37,7 @@ from basin_map import (  # noqa: E402
 
 from twr.capture_index import FLAG_COLORS  # noqa: E402
 from twr.config import load_basins, load_sites  # noqa: E402
-from twr.geo import Point, load_geography  # noqa: E402
+from twr.geo import Point, load_geography, load_texas_outline  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -318,3 +318,76 @@ def test_deck_renders_to_html_with_a_keyless_basemap(screening, geography):
     assert "cartocdn" in html
     assert "tooltip_title" in html
     assert "mapbox_key" not in html.lower()
+
+
+def test_basemap_style_is_resolved_not_a_placeholder(screening, geography):
+    """Regression: the basemap silently never painted.
+
+    The first version served tiles as a hand-rolled TileLayer with
+    map_provider=None. pydeck then leaves mapStyle as the literal string
+    "__MAP_STYLE__", the base render surface never initialises, and no tile is
+    ever drawn -- you get scatterplot dots on the page background. Nothing
+    raises, the log stays clean, and the tile URL is still present in the HTML,
+    so every cheap check passes while the map is visibly broken.
+
+    Assert on the resolved style instead: a real fetchable URL, and a provider.
+    """
+    deck, _ = basin_map(screening, geography, highlight_coastal=True)
+    spec = json.loads(deck.to_json())
+    assert "__MAP_STYLE__" not in deck.to_json()
+    assert spec["mapProvider"] == "carto"
+    assert str(spec["mapStyle"]).startswith("https://")
+    assert spec["mapStyle"].endswith(".json")
+
+
+def test_texas_outline_is_real_geometry(geography):
+    """The vendored outline must actually be Texas, not a synthetic box."""
+    rings = load_texas_outline()
+    assert rings, "no Texas outline vendored"
+    lons = [point[0] for ring in rings for point in ring]
+    lats = [point[1] for ring in rings for point in ring]
+    # Published extent of Texas, give or take generalisation.
+    assert -107.0 < min(lons) < -105.0
+    assert -94.5 < max(lons) < -93.0
+    assert 25.0 < min(lats) < 27.0
+    assert 36.0 < max(lats) < 37.0
+    assert sum(len(ring) for ring in rings) > 50, "outline too coarse to read as Texas"
+
+
+def test_every_basin_anchor_falls_inside_the_state_bounds(geography):
+    """A basin anchor outside the state outline would look plainly wrong."""
+    rings = load_texas_outline()
+    lons = [point[0] for ring in rings for point in ring]
+    lats = [point[1] for ring in rings for point in ring]
+    for geom in geography.basins.values():
+        assert min(lons) <= geom.centroid.lon <= max(lons), geom.id
+        assert min(lats) <= geom.centroid.lat <= max(lats), geom.id
+
+
+def test_state_outline_is_drawn_beneath_the_markers(screening, geography):
+    """Draw order matters: a filled polygon over the markers would hide them."""
+    deck, _ = basin_map(screening, geography, highlight_coastal=True)
+    types = [layer["@@type"] for layer in json.loads(deck.to_json())["layers"]]
+    assert types[0] == "PolygonLayer"
+    assert types.index("PolygonLayer") < types.index("ScatterplotLayer")
+
+
+def test_map_still_builds_without_the_vendored_outline(screening, geography, monkeypatch):
+    """A missing GeoJSON degrades to markers rather than breaking the tab."""
+    monkeypatch.setattr("basin_map.load_texas_outline", lambda: [])
+    deck, placed = basin_map(screening, geography, highlight_coastal=True)
+    assert placed == len(screening)
+    types = [layer["@@type"] for layer in json.loads(deck.to_json())["layers"]]
+    assert "PolygonLayer" not in types
+    assert "ScatterplotLayer" in types
+
+
+def test_no_hand_rolled_tile_layer(screening, geography):
+    """The basemap must come from the provider, not a TileLayer we assemble.
+
+    A TileLayer here is the shape of the bug above: it looks like a basemap in
+    the layer list and renders nothing.
+    """
+    deck, _ = basin_map(screening, geography, highlight_coastal=True)
+    spec = json.loads(deck.to_json())
+    assert "TileLayer" not in [layer["@@type"] for layer in spec["layers"]]

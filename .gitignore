@@ -31,3 +31,4 @@ outputs/*
 .idea/
 *.swp
 .worktrees/
+.gstack/

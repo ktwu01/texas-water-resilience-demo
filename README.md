@@ -47,11 +47,17 @@ streamlit run dashboard/app.py
 
 The statewide tab carries an interactive basin map: hover a marker for that
 basin's Capture Index, excess volume, and binding constraint. It uses pydeck,
-which ships with Streamlit, over an open CARTO basemap, so it needs no API key.
-The markers are hand-placed anchors rather than delineated watershed polygons;
-see `config/geography.yaml` for why. The static report has no map.
+which ships with Streamlit, over a keyless CARTO basemap, plus a vendored Texas
+state outline drawn as a deck layer so the state stays visible even when basemap
+tiles are blocked. The markers are hand-placed anchors rather than delineated
+watershed polygons, and marker size encodes the Capture Index rather than basin
+area; see `config/geography.yaml` and `docs/LIMITATIONS.md` for why. The static
+report has no map.
 
-`make demo` does the fast path end to end. `make test` runs 149 tests in about
+The map needs WebGL. In a browser without it (some remote/headless setups), the
+deck renders nothing.
+
+`make demo` does the fast path end to end. `make test` runs 155 tests in about
 20 seconds.
 
 Everything is deterministic: same seed, same numbers, on any machine.
@@ -118,6 +124,7 @@ threshold and its own hardware.
 ```
 config/            basin and site definitions (all placeholders); geography.yaml
                    holds approximate real map anchors and is the one exception
+data/geo/          vendored Texas state outline (US Census, public domain)
 src/twr/
   units.py         exact unit conversions, the only place a factor of 1000 can hide
   synth.py         conceptual hydrology -> sensor-like variables
@@ -136,7 +143,7 @@ scripts/           run_pipeline, make_report, make_synthetic_data, evaluate_down
 dashboard/app.py   Streamlit prototype
 dashboard/basin_map.py  pydeck basin map with per-basin hover cards
 docs/              ARCHITECTURE, DATA_SOURCES, LIMITATIONS, ROADMAP
-tests/             149 tests, including leakage, monotonicity, and regression guards
+tests/             155 tests, including leakage, monotonicity, and regression guards
 ```
 
 On the shipped synthetic data, leave-one-basin-out cross-validation gives event
