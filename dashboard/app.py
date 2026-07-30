@@ -25,7 +25,7 @@ import streamlit as st  # noqa: E402
 from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
 
-st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="~", layout="wide")
+st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="💧", layout="wide")
 
 DATE_COLUMNS = {
     "daily_timeseries.csv": ["date"],
@@ -116,7 +116,7 @@ def main() -> None:
         "**Synthetic demonstration data.** Every value here is simulated. Nothing on this "
         "page is an observation, a forecast, or an endorsement by NASA, TWDB, or any named "
         "partner. Infrastructure capacities are illustrative placeholders.",
-        icon="!",
+        icon="⚠️",
     )
 
     statewide = load("statewide_screening.csv")
