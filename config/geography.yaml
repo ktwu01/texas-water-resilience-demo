@@ -1,0 +1,88 @@
+# Map geography for the dashboard.
+#
+# WHAT IS REAL HERE AND WHAT IS NOT
+#
+# Unlike every other config file in this repo, the coordinates below are NOT
+# synthetic. They are approximate real-world locations, rounded to about 0.1
+# degrees, taken from public physical geography (river mouths, basin centres,
+# and the incorporated places the partner organisations sit in). They are here
+# so the dashboard can place a basin on a basemap at roughly the right spot.
+#
+# They are still NOT authoritative:
+#
+# - `centroid` is a hand-placed visual anchor near the middle of each basin,
+#   NOT a computed area centroid of a real watershed polygon.
+# - `outlet` is the approximate river mouth / downstream terminus.
+# - There are NO basin boundary polygons here. Drawing an invented outline
+#   would imply a delineation this repo has not done. A real deployment should
+#   replace this file with USGS Watershed Boundary Dataset (WBD) HUC polygons
+#   and TWDB major river basin shapefiles. See docs/DATA_SOURCES.md.
+#
+# Consequence for the map: basins are drawn as scaled point markers at their
+# anchors, not as filled watershed shapes. That is a deliberate choice to keep
+# the visual claim no stronger than the underlying data.
+#
+# `reaches_coast` marks basins whose outlet is on the Gulf of Mexico. The Brazos,
+# Colorado, Trinity, Guadalupe, San Antonio, and Nueces all discharge to the
+# Texas coast or to bays behind it; the Rio Grande reaches the Gulf at the
+# international border. This repo has no separate "Texas Coast" decision unit,
+# so the flag is an attribute of the existing basins rather than a new region.
+
+provenance: approximate_public_geography
+
+# Bounding box for the initial camera, in degrees. Texas plus a Gulf margin.
+view:
+  latitude: 31.2
+  longitude: -99.3
+  zoom: 4.7
+
+basins:
+  - id: brazos
+    centroid: {lat: 31.4, lon: -97.4}
+    outlet: {lat: 28.9, lon: -95.4}   # Freeport, Gulf of Mexico
+    reaches_coast: true
+
+  - id: colorado_tx
+    centroid: {lat: 31.0, lon: -99.2}
+    outlet: {lat: 28.6, lon: -95.9}   # Matagorda Bay
+    reaches_coast: true
+
+  - id: trinity
+    centroid: {lat: 32.2, lon: -96.3}
+    outlet: {lat: 29.8, lon: -94.7}   # Trinity Bay / Galveston Bay
+    reaches_coast: true
+
+  - id: guadalupe
+    centroid: {lat: 29.7, lon: -98.3}
+    outlet: {lat: 28.4, lon: -96.8}   # San Antonio Bay
+    reaches_coast: true
+
+  - id: san_antonio
+    centroid: {lat: 29.2, lon: -98.0}
+    outlet: {lat: 28.5, lon: -97.0}   # confluence with the Guadalupe
+    reaches_coast: true
+
+  - id: nueces
+    centroid: {lat: 28.9, lon: -99.4}
+    outlet: {lat: 27.8, lon: -97.4}   # Nueces Bay / Corpus Christi
+    reaches_coast: true
+
+  - id: rio_grande
+    centroid: {lat: 29.5, lon: -101.5}
+    outlet: {lat: 25.9, lon: -97.2}   # Brownsville, Gulf of Mexico
+    reaches_coast: true
+
+# Decision units. Placed at the approximate location of the named partner, which
+# is public information; the infrastructure they operate is still illustrative.
+sites:
+  - id: twdb_statewide
+    location: {lat: 30.3, lon: -97.7}   # Austin, TWDB headquarters
+    label: TWDB (statewide screening)
+
+  - id: rolling_plains_gcd
+    location: {lat: 33.6, lon: -100.0}  # Rolling Plains GCD, Stamford area
+    label: Rolling Plains GCD
+
+  - id: kerrville_asr
+    location: {lat: 30.0, lon: -99.1}   # Kerrville, Guadalupe headwaters
+    label: Kerrville ASR
