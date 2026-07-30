@@ -22,8 +22,13 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from basin_map import BASEMAP_ATTRIBUTION, basin_map  # noqa: E402
+
 from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
+from twr.geo import load_geography  # noqa: E402
 
 st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="💧", layout="wide")
 
@@ -48,6 +53,12 @@ def load_summary() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
+@st.cache_resource(show_spinner=False)
+def geography():
+    """Map anchors. Cached as a resource because it is immutable and unhashable."""
+    return load_geography()
+
+
 def flag_badge(flag: str) -> str:
     color = FLAG_COLORS.get(flag, "#888888")
     return (
@@ -70,6 +81,39 @@ def show_flag_card(row: pd.Series) -> None:
     st.caption(
         f"Binding now: `{row['binding_constraint']}` "
         f"| if the opportunity materialises: `{row['binding_if_captured']}`"
+    )
+
+
+def show_basin_map(statewide: pd.DataFrame) -> None:
+    """Basemap of the screened basins, with a hover card per basin."""
+    show_coast = st.toggle(
+        "Trace outlets to the Gulf coast",
+        value=True,
+        help=(
+            "Draws each basin's approximate river mouth and the reach to it. There is "
+            "no separate Texas Coast decision unit in this demo, so the coast is shown "
+            "as a property of the basins that drain to it."
+        ),
+    )
+    deck, placed = basin_map(statewide, geography(), highlight_coastal=show_coast)
+    if deck is None:
+        st.info("No basin geometry matched the screening output.")
+        return
+
+    st.pydeck_chart(deck, use_container_width=True)
+    caption = (
+        "Hover a basin for its Capture Index, excess volume, and binding constraint. "
+        "Marker size scales with the Capture Index; colour is the flag. Dark markers "
+        "are the three decision units."
+    )
+    missing = statewide["basin_id"].nunique() - placed
+    if missing > 0:
+        caption += f" {missing} screened basin(s) have no map anchor and are not drawn."
+    st.caption(caption)
+    st.caption(
+        "Markers are hand-placed anchors, not delineated watershed polygons: this demo "
+        "carries no basin boundaries, and drawing an invented outline would overstate "
+        f"what it knows. {BASEMAP_ATTRIBUTION}."
     )
 
 
@@ -139,9 +183,11 @@ def main() -> None:
     # --- scale 1 ---------------------------------------------------------
     with state_tab:
         st.subheader("Where in Texas is high-magnitude flow capturable this week?")
+
         if statewide.empty:
             st.info("No statewide screening output.")
         else:
+            show_basin_map(statewide)
             display = statewide[
                 ["basin_name", "flag", "capture_index", "binding_constraint",
                  "binding_if_captured", "median_excess_af", "q90_excess_af",
