@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.eggs/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Generated artefacts. Everything here is reproducible from a seed, so it does
+# not belong in history; committing it also risks a synthetic CSV being mistaken
+# for observational data later.
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
