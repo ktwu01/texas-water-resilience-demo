@@ -1,0 +1,115 @@
+# Major Texas river basins used by the demo.
+#
+# IMPORTANT: every number below is an order-of-magnitude PLACEHOLDER chosen so
+# that the synthetic hydrology behaves plausibly. None of it is an authoritative
+# value and none of it should be cited. Replace with TWDB / USGS / TCEQ sources
+# before the pipeline is pointed at real observations. See docs/DATA_SOURCES.md.
+#
+# usgs_site_no is deliberately null: the demo runs on synthetic gauges, and
+# inventing a real-looking site number would be worse than leaving a blank.
+
+basins:
+  - id: brazos
+    name: Brazos
+    gauge_id: SYN-BRAZ-01
+    usgs_site_no: null
+    drainage_area_km2: 116000
+    mean_annual_precip_mm: 800
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 60
+      base_cfs: 240
+      pulse_protection_fraction: 0.35
+    water_rights:
+      unappropriated_fraction: 0.30
+      permitted_diversion_af_per_year: 45000
+
+  - id: colorado_tx
+    name: Colorado (Texas)
+    gauge_id: SYN-COLO-01
+    usgs_site_no: null
+    drainage_area_km2: 109000
+    mean_annual_precip_mm: 700
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 50
+      base_cfs: 200
+      pulse_protection_fraction: 0.35
+    water_rights:
+      unappropriated_fraction: 0.25
+      permitted_diversion_af_per_year: 40000
+
+  - id: trinity
+    name: Trinity
+    gauge_id: SYN-TRIN-01
+    usgs_site_no: null
+    drainage_area_km2: 46000
+    mean_annual_precip_mm: 1050
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 70
+      base_cfs: 260
+      pulse_protection_fraction: 0.30
+    water_rights:
+      unappropriated_fraction: 0.20
+      permitted_diversion_af_per_year: 38000
+
+  - id: guadalupe
+    name: Guadalupe
+    gauge_id: SYN-GUAD-01
+    usgs_site_no: null
+    drainage_area_km2: 15500
+    mean_annual_precip_mm: 850
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 30
+      base_cfs: 110
+      pulse_protection_fraction: 0.40
+    water_rights:
+      unappropriated_fraction: 0.15
+      permitted_diversion_af_per_year: 12000
+
+  - id: nueces
+    name: Nueces
+    gauge_id: SYN-NUEC-01
+    usgs_site_no: null
+    drainage_area_km2: 44000
+    mean_annual_precip_mm: 600
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 20
+      base_cfs: 80
+      pulse_protection_fraction: 0.45
+    water_rights:
+      unappropriated_fraction: 0.20
+      permitted_diversion_af_per_year: 15000
+
+  - id: san_antonio
+    name: San Antonio
+    gauge_id: SYN-SANT-01
+    usgs_site_no: null
+    drainage_area_km2: 11000
+    mean_annual_precip_mm: 800
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 25
+      base_cfs: 95
+      pulse_protection_fraction: 0.40
+    water_rights:
+      unappropriated_fraction: 0.12
+      permitted_diversion_af_per_year: 9000
+
+  - id: rio_grande
+    name: Rio Grande (Texas reach)
+    gauge_id: SYN-RIOG-01
+    usgs_site_no: null
+    drainage_area_km2: 120000
+    mean_annual_precip_mm: 380
+    hmf_percentile: 95.0
+    eflow:
+      subsistence_cfs: 40
+      base_cfs: 150
+      pulse_protection_fraction: 0.50
+    water_rights:
+      unappropriated_fraction: 0.10
+      permitted_diversion_af_per_year: 20000

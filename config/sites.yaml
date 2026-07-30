@@ -1,0 +1,70 @@
+# Decision units, one per nested scale in the proposal.
+#
+# provenance: illustrative  ->  the infrastructure numbers are invented for the
+# demo. They are NOT the real capacities of any utility or district. Anyone
+# wiring this to a real operation must replace them with permit- and
+# design-document values and change provenance to a citation.
+#
+# CONSISTENCY REQUIREMENT: operational_threshold_af must be reachable by the
+# site's own hardware within the forecast window. If the well field can only
+# inject 56 AF in 7 days, a 60 AF threshold makes the Capture Index identically
+# zero and the dashboard silently useless. pipeline.validate_site_feasibility()
+# enforces this at run time; do not edit these numbers without re-running it.
+
+scales:
+  state: Statewide screening of high-magnitude-flow potential
+  watershed: Watershed-scale runoff forecasting for MAR siting
+  facility: Operational ASR decision support and scenario evaluation
+
+sites:
+  - id: twdb_statewide
+    name: Texas statewide HMF screening
+    scale: state
+    partner: Texas Water Development Board (TWDB)
+    basin_id: null            # null = every basin, screened side by side
+    provenance: illustrative
+    operational_threshold_af: 500
+    infrastructure:
+      max_diversion_cfs: 100000    # screening runs are not infrastructure-limited
+      conveyance_cfs: 100000
+      treatment_mgd: 100000
+      recharge_wells: 1000
+      well_capacity_gpm: 2000
+      storage_capacity_af: 5000000
+    storage_initial_fraction: 0.55
+
+  - id: rolling_plains_gcd
+    name: Rolling Plains Groundwater Conservation District
+    scale: watershed
+    partner: Rolling Plains Groundwater Conservation District
+    # The district sits on the Brazos / Red basin headwater divide. The demo
+    # attaches it to the Brazos hydrograph; the real study would split it.
+    basin_id: brazos
+    provenance: illustrative
+    operational_threshold_af: 250
+    infrastructure:
+      max_diversion_cfs: 120       # 1666 AF per 7-day window
+      conveyance_cfs: 90           # 1250 AF
+      treatment_mgd: 15            #  322 AF
+      recharge_wells: 12
+      well_capacity_gpm: 800       #  297 AF  <- binding limit for this site
+      storage_capacity_af: 9000
+    storage_initial_fraction: 0.45
+
+  - id: kerrville_asr
+    name: City of Kerrville ASR
+    scale: facility
+    partner: City of Kerrville
+    basin_id: guadalupe
+    provenance: illustrative
+    # 30 AF per window is a batch worth mobilising for, and it sits below the
+    # 56 AF the well field can inject, so the flag ladder is actually reachable.
+    operational_threshold_af: 30
+    infrastructure:
+      max_diversion_cfs: 30        # 416 AF per 7-day window
+      conveyance_cfs: 25           # 347 AF
+      treatment_mgd: 6             # 129 AF
+      recharge_wells: 4
+      well_capacity_gpm: 450       #  56 AF  <- binding limit for this site
+      storage_capacity_af: 2000
+    storage_initial_fraction: 0.62
