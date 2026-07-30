@@ -51,7 +51,7 @@ which ships with Streamlit, over an open CARTO basemap, so it needs no API key.
 The markers are hand-placed anchors rather than delineated watershed polygons;
 see `config/geography.yaml` for why. The static report has no map.
 
-`make demo` does the fast path end to end. `make test` runs 144 tests in about
+`make demo` does the fast path end to end. `make test` runs 149 tests in about
 20 seconds.
 
 Everything is deterministic: same seed, same numbers, on any machine.
@@ -136,7 +136,7 @@ scripts/           run_pipeline, make_report, make_synthetic_data, evaluate_down
 dashboard/app.py   Streamlit prototype
 dashboard/basin_map.py  pydeck basin map with per-basin hover cards
 docs/              ARCHITECTURE, DATA_SOURCES, LIMITATIONS, ROADMAP
-tests/             144 tests, including leakage, monotonicity, and regression guards
+tests/             149 tests, including leakage, monotonicity, and regression guards
 ```
 
 On the shipped synthetic data, leave-one-basin-out cross-validation gives event

@@ -15,6 +15,8 @@ hover card. That is why both frames must carry ``tooltip_title`` and
 
 from __future__ import annotations
 
+import json
+import math
 import sys
 from pathlib import Path
 
@@ -185,6 +187,65 @@ def test_unknown_flag_falls_back_to_grey(geography):
     assert frame.iloc[0]["color"] == [0x88, 0x88, 0x88]
 
 
+def test_missing_columns_are_reported_together(screening, geography):
+    """Fail once, naming every gap, rather than KeyError-ing on the first row."""
+    stripped = screening.drop(columns=["binding_constraint", "event_probability"])
+    with pytest.raises(KeyError) as excinfo:
+        build_basin_frame(stripped, geography)
+    message = str(excinfo.value)
+    assert "binding_constraint" in message
+    assert "event_probability" in message
+
+
+def test_non_finite_capture_index_stays_on_the_map(geography):
+    """A NaN radius serialises as a bare NaN and deck.gl drops the marker.
+
+    The basin then disappears with no error at all, which is the worst possible
+    failure for a screening map. Clamp to the bottom of the scale instead.
+    """
+    row = _screening_row("brazos", "Brazos", float("nan"), "WATCH")
+    frame = build_basin_frame(pd.DataFrame([row]), geography)
+    assert len(frame) == 1
+    assert math.isfinite(frame.iloc[0]["radius"])
+    assert frame.iloc[0]["radius"] == pytest.approx(MIN_RADIUS_M)
+
+
+def test_capture_index_is_clamped_to_the_unit_interval(geography):
+    """Radius must stay inside the designed range even on an out-of-range index."""
+    rows = pd.DataFrame(
+        [
+            _screening_row("brazos", "Brazos", 1.8, "CAPTURE"),
+            _screening_row("nueces", "Nueces", -0.4, "NO_ACTION"),
+        ]
+    )
+    frame = build_basin_frame(rows, geography)
+    assert frame["radius"].max() == pytest.approx(MAX_RADIUS_M)
+    assert frame["radius"].min() == pytest.approx(MIN_RADIUS_M)
+
+
+def test_missing_numbers_render_as_not_available(geography):
+    """"nan" in a hover card reads like a value; "n/a" reads like a gap."""
+    row = _screening_row("brazos", "Brazos", 0.5, "WATCH")
+    row["expected_capturable_af"] = float("nan")
+    frame = build_basin_frame(pd.DataFrame([row]), geography)
+    body = frame.iloc[0]["tooltip_body"]
+    assert "n/a AF" in body
+    assert "nan" not in body.lower()
+
+
+def test_layer_json_carries_no_non_finite_values(screening, geography):
+    """Bare NaN/Infinity is invalid JSON and breaks the deck.gl parse."""
+    rows = pd.concat(
+        [screening, pd.DataFrame([_screening_row("trinity", "Trinity", float("nan"), "WATCH")])],
+        ignore_index=True,
+    )
+    deck, _ = basin_map(rows, geography, highlight_coastal=True)
+    payload = deck.to_json()
+    assert "NaN" not in payload
+    assert "Infinity" not in payload
+    json.loads(payload)  # strict parse: would raise on a bare NaN
+
+
 def test_empty_screening_yields_no_frame_and_no_deck(geography):
     assert build_basin_frame(pd.DataFrame(), geography).empty
     deck, placed = basin_map(pd.DataFrame(), geography)
@@ -234,7 +295,7 @@ def test_deck_marks_only_the_point_layers_pickable(screening, geography):
     """Hover must hit basins and sites, never the basemap or the outlet lines."""
     deck, placed = basin_map(screening, geography, highlight_coastal=True)
     assert placed == len(screening)
-    spec = __import__("json").loads(deck.to_json())
+    spec = json.loads(deck.to_json())
     pickable = [
         layer["@@type"] for layer in spec["layers"] if layer.get("pickable") is True
     ]

@@ -17,6 +17,8 @@ boundaries. Radius encodes the Capture Index. See config/geography.yaml.
 
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 import pydeck as pdk
 
@@ -55,15 +57,25 @@ TOOLTIP_HTML = """
 """
 
 
+def _number(value: object, spec: str) -> str:
+    """Format a number for the hover card, showing gaps as such.
+
+    A NaN rendered by an f-string reads as the literal "nan", which in a decision
+    tool looks like a value rather than a missing one.
+    """
+    number = float(value)  # type: ignore[arg-type]
+    return format(number, spec) if math.isfinite(number) else "n/a"
+
+
 def _basin_tooltip_body(record: dict, index: float) -> str:
     return (
         f'<div style="opacity:0.75;margin-bottom:6px">{record["flag"]}'
         f" &middot; Capture Index {index:.2f}</div>"
-        f'<div>Expected capturable: <b>{float(record["expected_capturable_af"]):,.0f}'
-        f" AF</b></div>"
-        f'<div>Excess volume: {float(record["median_excess_af"]):,.0f} AF median,'
-        f' {float(record["q90_excess_af"]):,.0f} AF p90</div>'
-        f'<div>P(HMF in window): {float(record["event_probability"]):.2f}</div>'
+        f'<div>Expected capturable: <b>'
+        f'{_number(record["expected_capturable_af"], ",.0f")} AF</b></div>'
+        f'<div>Excess volume: {_number(record["median_excess_af"], ",.0f")} AF median,'
+        f' {_number(record["q90_excess_af"], ",.0f")} AF p90</div>'
+        f'<div>P(HMF in window): {_number(record["event_probability"], ".2f")}</div>'
         f'<div style="margin-top:6px;opacity:0.75">Binding now: '
         f'<code>{record["binding_constraint"]}</code></div>'
         f'<div style="opacity:0.75">If captured: '
@@ -81,21 +93,49 @@ TOOLTIP_STYLE = {
 }
 
 
+REQUIRED_COLUMNS = (
+    "basin_id",
+    "basin_name",
+    "capture_index",
+    "flag",
+    "binding_constraint",
+    "binding_if_captured",
+    "expected_capturable_af",
+    "median_excess_af",
+    "q90_excess_af",
+    "event_probability",
+)
+
+
 def build_basin_frame(screening: pd.DataFrame, geography: Geography) -> pd.DataFrame:
     """Join the screening table to map anchors, one row per basin.
 
     Basins with no geometry are dropped rather than guessed at, and the caller is
     expected to say so if the count changes.
+
+    Raises KeyError, naming every missing column at once, if the screening table
+    does not carry the fields the hover card reports. Failing here beats failing
+    per-row deep inside the layer construction.
     """
     if screening.empty:
         return pd.DataFrame()
+
+    missing = [name for name in REQUIRED_COLUMNS if name not in screening.columns]
+    if missing:
+        raise KeyError(f"screening table is missing columns: {', '.join(missing)}")
 
     rows = []
     for record in screening.to_dict("records"):
         geom = geography.basins.get(record["basin_id"])
         if geom is None:
             continue
+        # A non-finite index would serialise as a bare NaN in the layer JSON, and
+        # deck.gl then drops the marker with no error: the basin silently
+        # vanishes from the map. Treat it as the bottom of the scale instead.
         index = float(record["capture_index"])
+        if not math.isfinite(index):
+            index = 0.0
+        index = min(max(index, 0.0), 1.0)
         flag = record["flag"]
         rows.append(
             {
