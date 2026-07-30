@@ -30,3 +30,4 @@ outputs/*
 .vscode/
 .idea/
 *.swp
+.worktrees/
