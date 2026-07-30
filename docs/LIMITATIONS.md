@@ -96,7 +96,29 @@ quality, no clogging, no aquifer heterogeneity, no interference between wells.
 Recoverability is not the same as storage, and this module does not distinguish
 them. ASR feasibility in practice often turns on exactly those omissions.
 
-## 8. ARL claims
+## 8. The map is not a delineation
+
+`config/geography.yaml` is the one config file whose numbers are real rather than
+synthetic: the coordinates are approximate public geography (river mouths, basin
+midpoints, and the towns the partner organisations sit in), rounded to about 0.1
+degrees. That makes the dashboard map roughly correct in position, and it is
+still not a geospatial product.
+
+- **There are no basin boundary polygons.** Basins are drawn as scaled point
+  markers, not filled watersheds, because this repository has never delineated a
+  watershed. A filled outline would look authoritative and would be invented.
+  Replace with USGS Watershed Boundary Dataset HUC polygons and TWDB major river
+  basin shapefiles before showing this to anyone who works in GIS.
+- **`centroid` is a hand-placed visual anchor**, not a computed area centroid,
+  and it is not the gauge location either. Nothing in the model uses it; it only
+  decides where a marker lands.
+- **The marker area encodes the Capture Index, not basin size.** A large circle
+  means a high index in a possibly small basin. Anyone reading it as drainage
+  area will read it backwards.
+- The site markers are placed at the partner's town. The infrastructure those
+  markers represent is still illustrative, per section 5.
+
+## 9. ARL claims
 
 The proposal targets movement from ARL 2 to ARL 6, where ARL 6 means validation
 in a relevant operational environment with stakeholders. **This repository is

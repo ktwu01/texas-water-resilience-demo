@@ -79,6 +79,32 @@ Replacing them means sourcing:
 - aquifer storage capacity and recovery limits from the relevant groundwater
   availability model.
 
+## Map geography
+
+`config/geography.yaml` is the exception to the "everything is a placeholder"
+rule. Its coordinates are approximate real locations, rounded to about 0.1
+degrees, used only to place markers on the dashboard basemap. No model input
+reads them.
+
+What it deliberately does not contain is geometry. There are no basin boundary
+polygons, because this repository has not delineated any, and a hand-drawn
+outline would carry more authority than it earns. A real deployment should
+replace the point anchors with:
+
+- **USGS Watershed Boundary Dataset (WBD)** HUC8/HUC12 polygons, distributed
+  through The National Map, for watershed boundaries;
+- **TWDB major river basin and major aquifer** shapefiles for the basin and
+  aquifer extents Texas water planning actually uses;
+- **USGS NHDPlus** flowlines for the river network, if reaches are to be drawn
+  rather than straight anchor-to-outlet lines;
+- gauge coordinates from USGS NWIS site metadata, once `usgs_site_no` is
+  populated in `config/basins.yaml`.
+
+The dashboard basemap is the open CARTO raster tile service over OpenStreetMap
+data, chosen because it needs no API key and so cannot break for a fresh clone.
+Attribution is rendered under the map. A Google Maps basemap would require a
+billed API key, which does not belong in a public repository.
+
 ## Partner scales
 
 The three nested scales in `config/sites.yaml` name the Texas Water Development

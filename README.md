@@ -45,7 +45,13 @@ pip install streamlit
 streamlit run dashboard/app.py
 ```
 
-`make demo` does the fast path end to end. `make test` runs 124 tests in about
+The statewide tab carries an interactive basin map: hover a marker for that
+basin's Capture Index, excess volume, and binding constraint. It uses pydeck,
+which ships with Streamlit, over an open CARTO basemap, so it needs no API key.
+The markers are hand-placed anchors rather than delineated watershed polygons;
+see `config/geography.yaml` for why. The static report has no map.
+
+`make demo` does the fast path end to end. `make test` runs 144 tests in about
 20 seconds.
 
 Everything is deterministic: same seed, same numbers, on any machine.
@@ -110,7 +116,8 @@ threshold and its own hardware.
 ## Layout
 
 ```
-config/            basin and site definitions (all placeholders)
+config/            basin and site definitions (all placeholders); geography.yaml
+                   holds approximate real map anchors and is the one exception
 src/twr/
   units.py         exact unit conversions, the only place a factor of 1000 can hide
   synth.py         conceptual hydrology -> sensor-like variables
@@ -124,10 +131,12 @@ src/twr/
   capture_index.py the index, the flag ladder, the action text
   pipeline.py      end-to-end orchestration across the three scales
   scenarios.py     facility-scale what-if: hold the forecast, vary the hardware
+  geo.py           map anchors for the basins and the three decision units
 scripts/           run_pipeline, make_report, make_synthetic_data, evaluate_downscaling
 dashboard/app.py   Streamlit prototype
+dashboard/basin_map.py  pydeck basin map with per-basin hover cards
 docs/              ARCHITECTURE, DATA_SOURCES, LIMITATIONS, ROADMAP
-tests/             124 tests, including leakage, monotonicity, and regression guards
+tests/             144 tests, including leakage, monotonicity, and regression guards
 ```
 
 On the shipped synthetic data, leave-one-basin-out cross-validation gives event
