@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dashboard = ["streamlit>=1.30"]
+dashboard = ["streamlit>=1.49"]
 dev = ["pytest>=7.4", "ruff>=0.4"]
 
 [project.scripts]

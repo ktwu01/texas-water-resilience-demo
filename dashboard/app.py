@@ -169,7 +169,9 @@ def main() -> None:
         "page is an observation, a forecast, or an endorsement by NASA, TWDB, or any named "
         "partner. Infrastructure capacities are illustrative placeholders, and the map "
         "markers are approximate placeholder locations rather than gauge coordinates.",
-        icon="!",
+        # Streamlit validates this as a single emoji and raises on anything else,
+        # which took the whole page down when it was the string "!".
+        icon="⚠️",
     )
 
     statewide = load("statewide_screening.csv")
@@ -203,7 +205,7 @@ def main() -> None:
             ].copy()
             st.dataframe(
                 display.style.background_gradient(subset=["capture_index"], cmap="YlGnBu"),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
             st.caption(
@@ -266,7 +268,7 @@ def main() -> None:
             )
             st.dataframe(
                 grid.style.background_gradient(cmap="YlGnBu", vmin=0, vmax=1),
-                use_container_width=True,
+                width="stretch",
             )
             st.caption(
                 "Rows: available aquifer headroom (AF). Columns: multiplier on intake, "
@@ -284,7 +286,7 @@ def main() -> None:
             st.info("No cross-validation output. Run the pipeline without `--fast` or `--no-cv`.")
         else:
             st.markdown("**Leave-one-basin-out cross-validation**")
-            st.dataframe(cv, use_container_width=True, hide_index=True)
+            st.dataframe(cv, width="stretch", hide_index=True)
             picp = cv["picp_80"].mean()
             st.metric("Mean coverage of the nominal 80% interval", f"{picp:.0%}")
             st.caption(
@@ -320,7 +322,7 @@ def main() -> None:
                     mean_duration_days=("duration_days", "mean"),
                 )
                 .reset_index(),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
 
