@@ -1,4 +1,4 @@
-.PHONY: help install data demo run report downscale dashboard test lint clean
+.PHONY: help install data demo run report site downscale dashboard test lint clean
 
 PYTHON ?= python3
 export PYTHONPATH := src:.
@@ -9,6 +9,7 @@ help:
 	@echo "demo       fast pipeline + static HTML report (~30 s)"
 	@echo "run        full pipeline with spatial CV and scenario sweep (~3 min)"
 	@echo "report     rebuild outputs/report.html from existing outputs"
+	@echo "site       build _site/, the static bundle GitHub Pages publishes"
 	@echo "downscale  evaluate learned super-resolution vs interpolation"
 	@echo "dashboard  launch the Streamlit prototype (needs streamlit)"
 	@echo "test       run the test suite"
@@ -34,6 +35,12 @@ run:
 report:
 	$(PYTHON) scripts/make_report.py
 
+site:
+	$(PYTHON) scripts/run_pipeline.py --scenario
+	$(PYTHON) scripts/make_report.py
+	$(PYTHON) scripts/build_site.py
+	@echo "open _site/index.html   (this is exactly what GitHub Pages publishes)"
+
 downscale:
 	$(PYTHON) scripts/evaluate_downscaling.py --plot
 
@@ -47,6 +54,7 @@ lint:
 	ruff check src scripts dashboard tests
 
 clean:
+	rm -rf _site
 	rm -rf outputs/*.csv outputs/*.json outputs/*.html outputs/figures
 	rm -f data/processed/synthetic_daily.csv
 	find . -name __pycache__ -type d -prune -exec rm -rf {} +

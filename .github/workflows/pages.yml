@@ -1,0 +1,60 @@
+name: Build and publish the briefing to GitHub Pages
+
+# The published page is rebuilt from a seed on every push rather than served
+# from committed artefacts, because outputs/ is gitignored: a synthetic CSV in
+# git history is a synthetic CSV waiting to be mistaken for an observation.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A newer push should win. Cancelling a half-finished deploy is safe here since
+# the site is a pure function of the commit.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Test
+        # A broken pipeline should fail here, not publish a wrong-looking page.
+        run: python -m pytest
+
+      - name: Run the pipeline and render the briefing
+        run: |
+          python scripts/run_pipeline.py --scenario
+          python scripts/make_report.py
+          python scripts/build_site.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

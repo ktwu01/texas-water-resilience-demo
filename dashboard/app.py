@@ -18,6 +18,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
+# The repo root too, so a hosted deployment can import scripts.run_pipeline to
+# populate the gitignored outputs/ directory on first request.
+sys.path.insert(1, str(REPO_ROOT))
 
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
@@ -48,6 +51,29 @@ def load(name: str) -> pd.DataFrame:
 def load_summary() -> dict:
     path = OUTPUT_DIR / "run_summary.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+
+@st.cache_resource(show_spinner="First run on this server: generating the synthetic record.")
+def bootstrap_outputs() -> bool:
+    """Populate outputs/ on a fresh server, once.
+
+    outputs/ is gitignored, so a hosted deployment (Streamlit Community Cloud,
+    Hugging Face Spaces) starts with an empty directory. Rather than commit
+    synthetic CSVs, generate them on first request and cache the fact with
+    ``cache_resource`` so concurrent viewers share one run instead of racing to
+    write the same files. Returns False if generation failed, leaving the caller
+    to show the manual instructions.
+    """
+    from scripts.run_pipeline import main as run_pipeline
+
+    try:
+        run_pipeline(["--scenario"])
+    except Exception as error:  # surfaced in the UI below, not swallowed
+        st.session_state["bootstrap_error"] = repr(error)
+        return False
+    load.clear()
+    load_summary.clear()
+    return True
 
 
 def flag_badge(flag: str) -> str:
@@ -149,14 +175,21 @@ def flag_timeline(history: pd.DataFrame, site_id: str) -> None:
 
 
 def main() -> None:
-    summary = load_summary()
     flags = load("site_flags.csv")
     if flags.empty:
+        bootstrap_outputs()
+        flags = load("site_flags.csv")
+    if flags.empty:
         st.error(
-            "No outputs found. Run `python scripts/run_pipeline.py --scenario` first, "
-            f"which writes to {OUTPUT_DIR}."
+            "No outputs found and the pipeline could not be run here. Run "
+            "`python scripts/run_pipeline.py --scenario` first, which writes to "
+            f"{OUTPUT_DIR}."
         )
+        error = st.session_state.get("bootstrap_error")
+        if error:
+            st.code(error)
         st.stop()
+    summary = load_summary()
 
     st.title("From Floods to Droughts")
     st.caption(

@@ -30,3 +30,6 @@ outputs/*
 .vscode/
 .idea/
 *.swp
+
+# Static site staged by scripts/build_site.py, published by CI.
+_site/

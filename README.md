@@ -45,8 +45,18 @@ pip install streamlit
 streamlit run dashboard/app.py
 ```
 
-`make demo` does the fast path end to end. `make test` runs 124 tests in about
-20 seconds.
+`make demo` does the fast path end to end. `make test` runs the test suite in
+about 20 seconds.
+
+Both views open on a map of Texas showing where in the state high-magnitude flow
+is capturable this week: marker colour is the operational flag, marker area is
+expected capturable volume. The state outline is a real US Census cartographic
+boundary; the markers are approximate placeholder locations, not gauge
+coordinates. See [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md#geography).
+
+To publish either view for free, see [`docs/DEPLOY.md`](docs/DEPLOY.md):
+GitHub Pages for the static briefing, Streamlit Community Cloud for the
+dashboard. `make site` builds locally exactly what Pages publishes.
 
 Everything is deterministic: same seed, same numbers, on any machine.
 
@@ -124,10 +134,12 @@ src/twr/
   capture_index.py the index, the flag ladder, the action text
   pipeline.py      end-to-end orchestration across the three scales
   scenarios.py     facility-scale what-if: hold the forecast, vary the hardware
-scripts/           run_pipeline, make_report, make_synthetic_data, evaluate_downscaling
+  geo.py           the map layer: vendored Texas outline, approximate site points
+scripts/           run_pipeline, make_report, build_site, make_synthetic_data, evaluate_downscaling
 dashboard/app.py   Streamlit prototype
-docs/              ARCHITECTURE, DATA_SOURCES, LIMITATIONS, ROADMAP
-tests/             124 tests, including leakage, monotonicity, and regression guards
+data/geo/          the one real dataset: US Census Texas boundary, public domain
+docs/              ARCHITECTURE, DATA_SOURCES, DEPLOY, LIMITATIONS, ROADMAP
+tests/             138 tests, including leakage, monotonicity, and regression guards
 ```
 
 On the shipped synthetic data, leave-one-basin-out cross-validation gives event
