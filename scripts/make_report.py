@@ -37,6 +37,7 @@ from basin_map import BASEMAP_ATTRIBUTION, basin_map  # noqa: E402
 from twr.capture_index import FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
 from twr.geo import load_geography  # noqa: E402
+from twr.map_svg import basin_map_svg, size_legend_svg  # noqa: E402
 
 MAP_FILENAME = "basin_map.html"
 
@@ -180,15 +181,50 @@ def _basin_map(statewide: pd.DataFrame, output_dir: Path) -> tuple[str, str]:
         return "", ""
 
     deck.to_html(str(output_dir / MAP_FILENAME), open_browser=False, notebook_display=False)
+
+    geography = load_geography()
+    # The deck needs WebGL. Where it is missing it paints nothing and says nothing,
+    # so the page ships an SVG of the same data and swaps to it rather than showing
+    # an empty rectangle. The swap is done in the page because only the browser
+    # knows whether it has WebGL.
+    fallback = basin_map_svg(statewide, geography)
     embed = (
-        f'<iframe class="map" src="{MAP_FILENAME}" title="Basin map" loading="lazy"></iframe>'
+        f'<iframe class="map" id="deck-map" data-src="{MAP_FILENAME}" title="Basin map" '
+        'loading="lazy"></iframe>'
+        f'<div class="map fallback" id="svg-map" hidden>{fallback}</div>'
+        f'<div class="legend">{size_legend_svg()}</div>'
+        """<script>
+  (function () {
+    var ok = false;
+    try {
+      var probe = document.createElement("canvas");
+      ok = !!(probe.getContext("webgl2") || probe.getContext("webgl"));
+    } catch (error) {
+      ok = false;
+    }
+    var deck = document.getElementById("deck-map");
+    if (ok) {
+      // Only fetch the deck bundle when it can actually run. Pointing src at it
+      // unconditionally boots deck.gl just to watch it fail, which fills the
+      // console with errors behind an element nobody can see.
+      deck.src = deck.dataset.src;
+    } else {
+      deck.hidden = true;
+      var svg = document.getElementById("svg-map");
+      svg.hidden = false;
+      svg.insertAdjacentHTML("afterend",
+        '<p class="note">This browser has no WebGL, so the interactive map cannot ' +
+        'render. Showing the same basins as a static map: same anchors, same flags, ' +
+        'same size scale, no panning or hover.</p>');
+    }
+  })();
+</script>"""
     )
 
     caveat = (
         '<p class="note">Hover a basin for its Capture Index, excess volume, and binding '
-        "constraint. Marker size scales with the Capture Index, not with basin area, and "
-        "colour is the flag. The pale markers are the three decision units, and the thin "
-        "lines trace each basin to its approximate river mouth.</p>"
+        "constraint. The pale markers are the three decision units, and the thin lines "
+        "trace each basin to its approximate river mouth.</p>"
         '<p class="note">Markers are hand-placed anchors, not delineated watersheds: this '
         "demo carries no basin boundaries, and an invented outline would overstate what it "
         f"knows. The state polygon is a generalised US Census boundary. {BASEMAP_ATTRIBUTION}. "
@@ -241,6 +277,8 @@ TEMPLATE = """<!doctype html>
   .note {{ font-size: 12.5px; color: var(--dim); margin: 10px 0 0; }}
   .map {{ width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 10px;
           margin: 14px 0 6px; background: var(--panel); }}
+  .map.fallback {{ height: auto; padding: 8px; }}
+  .legend {{ margin: 6px 0 2px; }}
   table {{ border-collapse: collapse; font-size: 13px; width: 100%;
            background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }}
   th, td {{ padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--line); }}

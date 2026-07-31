@@ -32,6 +32,7 @@ from basin_map import BASEMAP_ATTRIBUTION, basin_map  # noqa: E402
 from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
 from twr.geo import load_geography  # noqa: E402
+from twr.map_svg import basin_map_svg, size_legend_svg  # noqa: E402
 
 st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="💧", layout="wide")
 
@@ -112,25 +113,52 @@ def show_flag_card(row: pd.Series) -> None:
 
 def show_basin_map(statewide: pd.DataFrame) -> None:
     """Basemap of the screened basins, with a hover card per basin."""
-    show_coast = st.toggle(
-        "Trace outlets to the Gulf coast",
-        value=True,
-        help=(
-            "Draws each basin's approximate river mouth and the reach to it. There is "
-            "no separate Texas Coast decision unit in this demo, so the coast is shown "
-            "as a property of the basins that drain to it."
-        ),
-    )
+    left, right = st.columns([2, 1])
+    with left:
+        show_coast = st.toggle(
+            "Trace outlets to the Gulf coast",
+            value=True,
+            help=(
+                "Draws each basin's approximate river mouth and the reach to it. There is "
+                "no separate Texas Coast decision unit in this demo, so the coast is shown "
+                "as a property of the basins that drain to it."
+            ),
+        )
+    with right:
+        # The deck needs WebGL, and where it is missing it paints nothing without
+        # raising: the tab just looks broken. Streamlit cannot detect that server
+        # side, so this is a manual escape hatch to the SVG version.
+        static = st.toggle(
+            "Static map (no WebGL)",
+            value=False,
+            help=(
+                "Draws the same basins as an SVG instead of through deck.gl. Use this if "
+                "the map area is blank, which means this browser has no WebGL."
+            ),
+        )
+
+    if static:
+        svg = basin_map_svg(statewide, geography())
+        if not svg:
+            st.info("No basin geometry matched the screening output.")
+            return
+        st.markdown(svg, unsafe_allow_html=True)
+        st.markdown(size_legend_svg(), unsafe_allow_html=True)
+        st.caption(
+            "Static fallback: same anchors, same flags, same size scale, no panning and "
+            "no hover cards."
+        )
+        return
     deck, placed = basin_map(statewide, geography(), highlight_coastal=show_coast)
     if deck is None:
         st.info("No basin geometry matched the screening output.")
         return
 
     st.pydeck_chart(deck, width="stretch", height=520)
+    st.markdown(size_legend_svg(), unsafe_allow_html=True)
     caption = (
         "Hover a basin for its Capture Index, excess volume, and binding constraint. "
-        "Marker size scales with the Capture Index; colour is the flag. Dark markers "
-        "are the three decision units."
+        "The pale markers are the three decision units."
     )
     missing = statewide["basin_id"].nunique() - placed
     if missing > 0:
