@@ -11,7 +11,7 @@ properties follow from that definition and both matter:
 * It is a probability of an *action being worth taking*, not a probability of
   rain. A basin can be about to flood and still score zero because the aquifer
   is full or the water is fully appropriated.
-* It is scale-aware. The same forecast yields different indices for TWDB
+* It is scale-aware. The same forecast yields different indices for statewide
   screening, a groundwater district, and a single ASR facility, because each has
   a different threshold and different hardware.
 

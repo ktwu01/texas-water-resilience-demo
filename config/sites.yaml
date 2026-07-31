@@ -17,10 +17,12 @@ scales:
   facility: Operational ASR decision support and scenario evaluation
 
 sites:
-  - id: twdb_statewide
-    name: Texas statewide HMF screening
+  - id: statewide_screening
+    name: Statewide HMF screening
     scale: state
-    partner: Texas Water Development Board (TWDB)
+    # Roles, not organisations. No real agency, district, or utility is named
+    # anywhere in this repository, and none has reviewed or supplied any of it.
+    partner: state water agency (generic role)
     basin_id: null            # null = every basin, screened side by side
     provenance: illustrative
     operational_threshold_af: 500
@@ -33,12 +35,12 @@ sites:
       storage_capacity_af: 5000000
     storage_initial_fraction: 0.55
 
-  - id: rolling_plains_gcd
-    name: Rolling Plains Groundwater Conservation District
+  - id: district_mar
+    name: Groundwater district MAR programme
     scale: watershed
-    partner: Rolling Plains Groundwater Conservation District
-    # The district sits on the Brazos / Red basin headwater divide. The demo
-    # attaches it to the Brazos hydrograph; the real study would split it.
+    partner: groundwater conservation district (generic role)
+    # A district of this kind typically straddles a basin divide. The demo
+    # attaches it to one hydrograph; a real study would split it.
     basin_id: brazos
     provenance: illustrative
     operational_threshold_af: 250
@@ -51,10 +53,10 @@ sites:
       storage_capacity_af: 9000
     storage_initial_fraction: 0.45
 
-  - id: kerrville_asr
-    name: City of Kerrville ASR
+  - id: facility_asr
+    name: Municipal ASR facility
     scale: facility
-    partner: City of Kerrville
+    partner: municipal water utility (generic role)
     basin_id: guadalupe
     provenance: illustrative
     # 30 AF per window is a batch worth mobilising for, and it sits below the

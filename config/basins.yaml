@@ -2,17 +2,17 @@
 #
 # IMPORTANT: every number below is an order-of-magnitude PLACEHOLDER chosen so
 # that the synthetic hydrology behaves plausibly. None of it is an authoritative
-# value and none of it should be cited. Replace with TWDB / USGS / TCEQ sources
+# value and none of it should be cited. Replace with authoritative agency sources
 # before the pipeline is pointed at real observations. See docs/DATA_SOURCES.md.
 #
-# usgs_site_no is deliberately null: the demo runs on synthetic gauges, and
+# gauge_site_no is deliberately null: the demo runs on synthetic gauges, and
 # inventing a real-looking site number would be worse than leaving a blank.
 
 basins:
   - id: brazos
     name: Brazos
     gauge_id: SYN-BRAZ-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 116000
     mean_annual_precip_mm: 800
     hmf_percentile: 95.0
@@ -27,7 +27,7 @@ basins:
   - id: colorado_tx
     name: Colorado (Texas)
     gauge_id: SYN-COLO-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 109000
     mean_annual_precip_mm: 700
     hmf_percentile: 95.0
@@ -42,7 +42,7 @@ basins:
   - id: trinity
     name: Trinity
     gauge_id: SYN-TRIN-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 46000
     mean_annual_precip_mm: 1050
     hmf_percentile: 95.0
@@ -57,7 +57,7 @@ basins:
   - id: guadalupe
     name: Guadalupe
     gauge_id: SYN-GUAD-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 15500
     mean_annual_precip_mm: 850
     hmf_percentile: 95.0
@@ -72,7 +72,7 @@ basins:
   - id: nueces
     name: Nueces
     gauge_id: SYN-NUEC-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 44000
     mean_annual_precip_mm: 600
     hmf_percentile: 95.0
@@ -87,7 +87,7 @@ basins:
   - id: san_antonio
     name: San Antonio
     gauge_id: SYN-SANT-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 11000
     mean_annual_precip_mm: 800
     hmf_percentile: 95.0
@@ -102,7 +102,7 @@ basins:
   - id: rio_grande
     name: Rio Grande (Texas reach)
     gauge_id: SYN-RIOG-01
-    usgs_site_no: null
+    gauge_site_no: null
     drainage_area_km2: 120000
     mean_annual_precip_mm: 380
     hmf_percentile: 95.0

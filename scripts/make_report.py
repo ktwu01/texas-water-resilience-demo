@@ -227,7 +227,8 @@ def _basin_map(statewide: pd.DataFrame, output_dir: Path) -> tuple[str, str]:
         "trace each basin to its approximate river mouth.</p>"
         '<p class="note">Markers are hand-placed anchors, not delineated watersheds: this '
         "demo carries no basin boundaries, and an invented outline would overstate what it "
-        f"knows. The state polygon is a generalised US Census boundary. {BASEMAP_ATTRIBUTION}. "
+        f"knows. The state polygon is a generalised public-domain national boundary. "
+        f"{BASEMAP_ATTRIBUTION}. "
         "The map needs WebGL and network access for the basemap tiles; the state outline is "
         "part of the deck, so Texas still draws without them.</p>"
     )
@@ -298,7 +299,8 @@ TEMPLATE = """<!doctype html>
 
 <div class="banner"><b>Synthetic data.</b> Every number on this page comes from a stochastic
 simulator in <code>twr/synth.py</code>. Nothing here is an observation, a forecast, or an
-endorsement by NASA, TWDB, or any named partner. Infrastructure capacities are illustrative
+endorsement by any agency, district, utility, or other organisation. Infrastructure
+capacities are illustrative
 placeholders, and the map markers are hand-placed anchors rather than delineated watersheds.
 If you reached this page by a link rather than by cloning the repository, read
 <a href="https://github.com/ktwu01/texas-water-resilience-demo/blob/main/docs/LIMITATIONS.md">
@@ -309,7 +311,7 @@ LIMITATIONS.md</a> before quoting anything on it.</div>
 {cards}
 </div>
 
-<h2>Scale 1: statewide screening (TWDB)</h2>
+<h2>Scale 1: statewide screening</h2>
 {map_embed}
 {map_caveat}
 {screening_img}
@@ -344,7 +346,8 @@ when a feature is shuffled.</p>
 {importance_table}
 
 <footer>
-Scaffold for proposal 25-WATER25_2-0155 (PI Zong-Liang Yang, UT Austin).
+Demonstration scaffold. Synthetic data throughout. No organisation or person is
+named, affiliated, or endorsed.
 Flag thresholds: {thresholds}.
 </footer>
 </body></html>"""

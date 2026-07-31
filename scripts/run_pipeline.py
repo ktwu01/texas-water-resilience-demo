@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  Inspect it with: --as-of {peak['date'].date()}")
 
     if not result.statewide.empty:
-        print("\nStatewide screening for TWDB")
+        print("\nStatewide screening")
         columns = [
             "basin_name",
             "capture_index",

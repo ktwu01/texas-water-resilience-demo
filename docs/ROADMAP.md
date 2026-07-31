@@ -10,7 +10,7 @@ test, on synthetic data. Here is what each step up actually requires.
 Implement `twr.ingest.load_observed()` so it returns the columns in
 `synth.SENSOR_COLUMNS`. Nothing downstream changes. Order of work:
 
-1. USGS NWIS discharge first, because it is open, low latency, and defines the
+1. Public gauge discharge first, because it is open, low latency, and defines the
    target. Everything else is optional until the target is real.
 2. IMERG Late Run, aggregated to daily over basin polygons.
 3. SMAP `SPL3SMP_E`, basin-mean, with a real gap-handling policy.
@@ -35,7 +35,7 @@ features, not after.
 
 Replace the multiplicative caricature in `constraints.py` with:
 
-- TCEQ adopted environmental flow standards per basin, seasonal, with subsistence
+- Adopted environmental flow standards per basin, seasonal, with subsistence
   / base / pulse tiers and pulse-counting logic;
 - water-right accounting with priority dates, so priority calls are representable;
 - the surface-water-versus-groundwater ownership distinction, which is the legal
@@ -70,7 +70,7 @@ amount of code earns it. What earns it:
   mobilises a crew for nothing has a price. Until that price is written down, the
   flag thresholds cannot be tuned and "skill" has no operational meaning.
 - **Failure-mode agreement.** Which is worse here, a missed capture or a wasted
-  mobilisation? That answer differs between TWDB screening and a Kerrville
+  mobilisation? That answer differs between statewide screening and a facility
   operator, and it should change the thresholds per scale.
 
 ## Step 6: things that will bite
@@ -79,7 +79,7 @@ amount of code earns it. What earns it:
   distribution resembles the past. Compound extremes are precisely the regime
   where it will not. Monitor coverage in operation, not just at fit time.
 - **Train/serve skew.** Train on the latency-matched product you will operate on
-  (IMERG Late, provisional USGS), not the research-grade version.
+  (near-real-time precipitation, provisional gauge data), not the research-grade version.
 - **Provisional data revision.** Ratings change after floods. A retrospective
   catalogue rebuilt a year later will not match the real-time one, so archive what
   the system actually saw at decision time.

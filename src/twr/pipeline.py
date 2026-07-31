@@ -390,7 +390,7 @@ def write_outputs(result: PipelineResult, output_dir: Path | None = None) -> dic
         ),
         "disclaimer": (
             "Synthetic demonstration data. Not an observation, not a forecast, "
-            "and not endorsed by NASA, TWDB, or any named partner."
+            "and not endorsed by any agency, district, utility, or other organisation."
         ),
     }
     path = output_dir / "run_summary.json"

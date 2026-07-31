@@ -1,6 +1,6 @@
 """Learned super-resolution of coarse forcing fields.
 
-The proposal downscales near-real-time NASA forcing (NLDAS-3 class) toward
+The intended system downscales near-real-time reanalysis forcing toward
 high-resolution reanalysis (CONUS404 class) with a deep-learning
 super-resolution model. A CNN is the right tool there and the wrong tool for a
 demo that must run on a laptop in seconds with no GPU and no PyTorch install, so

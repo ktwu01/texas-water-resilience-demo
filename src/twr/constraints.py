@@ -7,7 +7,7 @@ put underground, and reports *which* limit binds, because that is the
 information that changes what an operator does next:
 
     binding = eflow_pulse       -> nothing to do, the river needs the pulse
-    binding = water_rights      -> go talk to TCEQ, not to your pump crew
+    binding = water_rights      -> go talk to the state regulator, not your pump crew
     binding = diversion_rate    -> a bigger intake would pay for itself
     binding = recharge_capacity -> drill or rehabilitate wells
     binding = storage_headroom  -> the aquifer is full, recover before recharging

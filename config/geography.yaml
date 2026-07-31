@@ -5,8 +5,10 @@
 # Unlike every other config file in this repo, the coordinates below are NOT
 # synthetic. They are approximate real-world locations, rounded to about 0.1
 # degrees, taken from public physical geography (river mouths, basin centres,
-# and the incorporated places the partner organisations sit in). They are here
-# so the dashboard can place a basin on a basemap at roughly the right spot.
+# and unremarkable points near the middle of each decision unit's area). They
+# are here so the dashboard can place a basin on a basemap at roughly the right
+# spot. No organisation or person is named in this file or anywhere else in the
+# repository: the decision units are generic roles.
 #
 # They are still NOT authoritative:
 #
@@ -15,8 +17,8 @@
 # - `outlet` is the approximate river mouth / downstream terminus.
 # - There are NO basin boundary polygons here. Drawing an invented outline
 #   would imply a delineation this repo has not done. A real deployment should
-#   replace this file with USGS Watershed Boundary Dataset (WBD) HUC polygons
-#   and TWDB major river basin shapefiles. See docs/DATA_SOURCES.md.
+#   replace this file with Watershed Boundary Dataset (WBD) HUC polygons
+#   and the state's major river basin shapefiles. See docs/DATA_SOURCES.md.
 #
 # Consequence for the map: basins are drawn as scaled point markers at their
 # anchors, not as filled watershed shapes. That is a deliberate choice to keep
@@ -73,17 +75,18 @@ basins:
     outlet: {lat: 25.9, lon: -97.2}   # Brownsville, Gulf of Mexico
     reaches_coast: true
 
-# Decision units. Placed at the approximate location of the named partner, which
-# is public information; the infrastructure they operate is still illustrative.
+# Decision units, at arbitrary approximate points within the region each one
+# would plausibly operate in. They are not the address of any organisation, and
+# the infrastructure attached to them is illustrative.
 sites:
-  - id: twdb_statewide
-    location: {lat: 30.3, lon: -97.7}   # Austin, TWDB headquarters
-    label: TWDB (statewide screening)
+  - id: statewide_screening
+    location: {lat: 30.3, lon: -97.7}   # central Texas
+    label: Statewide screening
 
-  - id: rolling_plains_gcd
-    location: {lat: 33.6, lon: -100.0}  # Rolling Plains GCD, Stamford area
-    label: Rolling Plains GCD
+  - id: district_mar
+    location: {lat: 33.6, lon: -100.0}  # north-central plains
+    label: Groundwater district (MAR)
 
-  - id: kerrville_asr
-    location: {lat: 30.0, lon: -99.1}   # Kerrville, Guadalupe headwaters
-    label: Kerrville ASR
+  - id: facility_asr
+    location: {lat: 30.0, lon: -99.1}   # Hill Country, Guadalupe headwaters
+    label: ASR facility

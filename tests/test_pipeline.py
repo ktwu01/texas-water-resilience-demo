@@ -46,9 +46,9 @@ def test_shipped_config_loads(basins, sites):
 
 
 def test_config_does_not_claim_real_gauge_numbers(basins):
-    """Inventing a plausible USGS site number would be worse than a blank."""
+    """Inventing a plausible gauge site number would be worse than a blank."""
     for basin in basins:
-        assert basin.usgs_site_no is None
+        assert basin.gauge_site_no is None
         assert basin.gauge_id.startswith("SYN-")
 
 

@@ -89,10 +89,10 @@ still not a geospatial product.
 - **There are no basin boundary polygons.** Basins are drawn as scaled point
   markers, not filled watersheds, because this repository has never delineated a
   watershed. A filled outline would look authoritative and would be invented.
-  Replace with USGS Watershed Boundary Dataset HUC polygons and TWDB major river
-  basin shapefiles before showing this to anyone who works in GIS.
+  Replace with Watershed Boundary Dataset HUC polygons and the state's major
+  river basin shapefiles before showing this to anyone who works in GIS.
 - **The one real polygon is the state outline** in `data/geo/texas_state.geojson`,
-  a generalised US Census cartographic boundary (~150 vertices, public domain). It
+  a generalised public-domain national cartographic boundary (~150 vertices). It
   is there so the map reads as Texas even when basemap tiles do not load. Its Gulf
   coastline is simplified and nothing should be measured from it.
 - **`centroid` is a hand-placed visual anchor**, not a computed area centroid,

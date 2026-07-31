@@ -1,12 +1,12 @@
 """Texas water resilience demo: high-magnitude flow capture decision support.
 
-A runnable, synthetic-data demonstration of the analysis chain described in
-"From Floods to Droughts: AI-Enabled End-to-End Water Resilience for Texas"
-(proposal 25-WATER25_2-0155, PI Zong-Liang Yang, The University of Texas at
-Austin).
+A runnable, synthetic-data demonstration of an end-to-end analysis chain: from
+flood-flow forecasting to managed aquifer recharge decisions, at three nested
+scales.
 
 This package is a scaffold and a teaching artefact. It contains no observations
-and produces no forecasts. See README.md for the full scope statement.
+and produces no forecasts. No organisation or person is named, affiliated, or
+endorsed anywhere in it. See README.md for the full scope statement.
 """
 
 from __future__ import annotations

@@ -3,7 +3,7 @@
 ## The chain
 
 ```
-NASA EO + gauges          twr/ingest.py       (synthetic in this demo)
+satellite EO + gauges     twr/ingest.py       (synthetic in this demo)
         |
         v
 conceptual hydrology      twr/synth.py        soil store, routing, sensor noise
@@ -24,7 +24,7 @@ constraint chain          twr/constraints.py  eflow -> rights -> hardware -> sto
 Capture Index + flag      twr/capture_index.py
         |
         v
-three nested scales       twr/pipeline.py     TWDB / GCD / utility
+three nested scales       twr/pipeline.py     state / district / facility
         |
         v
 scenario evaluation       twr/scenarios.py    hold forecast, vary hardware
@@ -80,7 +80,7 @@ earliest link, which is the one they cannot buy their way past.
 | `no_hmf` | no excess flow at all | nothing |
 | `hydrologic_availability` | excess below the operational threshold | nothing |
 | `eflow_pulse` | the river needs the pulse | nothing; this is by design |
-| `water_rights` | flow is appropriated | talk to TCEQ, not the pump crew |
+| `water_rights` | flow is appropriated | talk to the state regulator, not the pump crew |
 | `annual_permit` | permit volume spent for the year | permit amendment |
 | `diversion_rate` | intake too small | capital project |
 | `conveyance` | pipeline too small | capital project |
@@ -145,7 +145,7 @@ better behind an unchanged interface.
 | synthetic sensors (`synth.py`) | `ingest.load_observed()`, see DATA_SOURCES.md |
 | lumped storage bucket (`aquifer.py`) | the district's calibrated groundwater model |
 | ridge-on-patches super-resolution | a CNN; same `fit`/`predict` interface |
-| percentile HMF threshold | basin-specific standards, TCEQ pulse definitions |
+| percentile HMF threshold | basin-specific standards, adopted pulse definitions |
 | single pulse-protection fraction | full HEFR-style seasonal eflow standards |
 | calendar-year permit accounting | actual water-right accounting and priority calls |
 | illustrative capacities | permit and design-document values |

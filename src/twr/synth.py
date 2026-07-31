@@ -9,7 +9,7 @@ and then degrade its internal states into "sensor" variables:
     soil_moisture    <- SMAP L3 proxy           (top-layer wetness + noise)
     et_mm            <- ECOSTRESS proxy         (actual ET + noise, gappy)
     water_extent_km2 <- SWOT proxy              (hydraulic-geometry function of Q)
-    flow_cfs         <- USGS gauge proxy        (near-truth, small noise)
+    flow_cfs         <- stream gauge proxy      (near-truth, small noise)
 
 Only the sensor columns are ever handed to the learning code. The internal
 states (soil store, groundwater store) stay hidden, which is the honest version

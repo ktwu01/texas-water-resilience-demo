@@ -218,8 +218,9 @@ def main() -> None:
     )
     st.warning(
         "**Synthetic demonstration data.** Every value here is simulated. Nothing on this "
-        "page is an observation, a forecast, or an endorsement by NASA, TWDB, or any named "
-        "partner. Infrastructure capacities are illustrative placeholders, and the map "
+        "page is an observation, a forecast, or an endorsement by any agency, district, "
+        "utility, or other organisation. Infrastructure capacities are illustrative "
+        "placeholders, and the map "
         "markers are hand-placed anchors rather than delineated watersheds.",
         # Streamlit validates this as a single emoji and raises on anything else,
         # which took the whole page down when it was the string "!".
@@ -236,9 +237,9 @@ def main() -> None:
 
     state_tab, watershed_tab, facility_tab, trust_tab = st.tabs(
         [
-            "1. Statewide screening (TWDB)",
-            "2. Watershed MAR (Rolling Plains GCD)",
-            "3. ASR operations (City of Kerrville)",
+            "1. Statewide screening",
+            "2. Watershed MAR (groundwater district)",
+            "3. ASR operations (municipal facility)",
             "Trustworthy AI",
         ]
     )
@@ -267,11 +268,11 @@ def main() -> None:
                 "plan against."
             )
         st.markdown("#### Capture Index by basin over the replay window")
-        flag_timeline(history, "twdb_statewide")
+        flag_timeline(history, "statewide_screening")
 
     # --- scale 2 ---------------------------------------------------------
     with watershed_tab:
-        row = flags[flags["site_id"] == "rolling_plains_gcd"]
+        row = flags[flags["site_id"] == "district_mar"]
         st.subheader("Watershed-scale runoff forecasting for managed aquifer recharge")
         if row.empty:
             st.info("No assessment for this site.")
@@ -288,11 +289,11 @@ def main() -> None:
                     st.line_chart(group[["flow_cfs", "hmf_threshold_cfs"]], height=200)
                     st.markdown("**Antecedent storage deficit (SMAP proxy)**")
                     st.line_chart(group[["storage_deficit_index"]], height=150)
-        flag_timeline(history, "rolling_plains_gcd")
+        flag_timeline(history, "district_mar")
 
     # --- scale 3 ---------------------------------------------------------
     with facility_tab:
-        row = flags[flags["site_id"] == "kerrville_asr"]
+        row = flags[flags["site_id"] == "facility_asr"]
         st.subheader("Operational ASR decision support and scenario evaluation")
         if row.empty:
             st.info("No assessment for this site.")
@@ -302,7 +303,7 @@ def main() -> None:
             with left:
                 show_flag_card(record)
             with right:
-                group = storage[storage["site_id"] == "kerrville_asr"].set_index("date")
+                group = storage[storage["site_id"] == "facility_asr"].set_index("date")
                 if not group.empty:
                     st.markdown("**Aquifer storage state**")
                     st.area_chart(group[["storage_fraction"]], height=200)
@@ -310,7 +311,7 @@ def main() -> None:
                         "Recovery draws the bucket down through summer. Recharge is only "
                         "possible into the headroom that remains."
                     )
-        flag_timeline(history, "kerrville_asr")
+        flag_timeline(history, "facility_asr")
 
         st.markdown("#### Scenario evaluation: what would change the answer?")
         if sweep.empty:

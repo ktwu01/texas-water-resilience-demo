@@ -87,7 +87,7 @@ class Geography:
 def load_texas_outline(path: Path | None = None) -> list[list[list[float]]]:
     """Texas state boundary as a list of [lon, lat] rings.
 
-    This is real geometry (US Census cartographic boundary, public domain), not a
+    This is real geometry (a public-domain national cartographic boundary), not a
     synthetic shape, and it is generalised for display: roughly 150 vertices for
     the whole state, with a simplified Gulf coastline. It exists so the map shows
     recognisable Texas even where the basemap tiles are unavailable, which is the

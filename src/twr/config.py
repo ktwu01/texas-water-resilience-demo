@@ -62,7 +62,7 @@ class Basin:
     hmf_percentile: float
     eflow: EnvironmentalFlow
     water_rights: WaterRights
-    usgs_site_no: str | None = None
+    gauge_site_no: str | None = None
 
 
 @dataclass(frozen=True)
@@ -102,7 +102,7 @@ def load_basins(path: Path | None = None) -> list[Basin]:
                 id=raw["id"],
                 name=raw["name"],
                 gauge_id=raw["gauge_id"],
-                usgs_site_no=raw.get("usgs_site_no"),
+                gauge_site_no=raw.get("gauge_site_no"),
                 drainage_area_km2=float(raw["drainage_area_km2"]),
                 mean_annual_precip_mm=float(raw["mean_annual_precip_mm"]),
                 hmf_percentile=float(raw["hmf_percentile"]),
