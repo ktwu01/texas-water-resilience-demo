@@ -66,6 +66,12 @@ def build_site(output_dir: Path, site_dir: Path) -> Path:
     if figures.exists():
         shutil.copytree(figures, site_dir / "figures")
 
+    # The basin map is a separate document that index.html iframes, so it has to
+    # travel with the page or the map slot renders empty.
+    basin_map = output_dir / "basin_map.html"
+    if basin_map.exists():
+        shutil.copy2(basin_map, site_dir / basin_map.name)
+
     published = []
     data_dir = site_dir / "data"
     data_dir.mkdir()

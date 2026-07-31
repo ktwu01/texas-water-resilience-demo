@@ -79,29 +79,38 @@ Replacing them means sourcing:
 - aquifer storage capacity and recovery limits from the relevant groundwater
   availability model.
 
-## Geography
+## Map geography
 
-`data/geo/texas_boundary.json` is the only real dataset in the repository. It is
-the Texas polygon from the US Census Bureau 2022 cartographic boundary files at
-1:20,000,000 (`cb_2022_us_state_20m`), simplified with Douglas-Peucker at 0.01
-degrees, exterior rings only. Census products are in the public domain. It is
-cartographic, not survey grade, and it is used for exactly one purpose: telling a
-viewer which part of the state a table row refers to. The file records its own
-source, URL, licence, and coordinate order, and a test asserts those fields are
-present so the provenance cannot quietly rot into an uncited blob.
+`config/geography.yaml` is the exception to the "everything is a placeholder"
+rule. Its coordinates are approximate real locations, rounded to about 0.1
+degrees, used only to place markers on the dashboard basemap. No model input
+reads them.
 
-The point locations in `src/twr/geo.py` are **not** real. `BASIN_POINTS` reduces
-each basin to one coordinate placed by eye near the mid-basin reach the synthetic
-gauge is meant to evoke, and `SITE_POINTS` puts a multi-county groundwater
-district and a city ASR facility at single approximate points. They carry
-`provenance: approximate` for the same reason the infrastructure numbers carry
-`illustrative`. Replacing them means sourcing gauge coordinates from USGS NWIS,
-major river basin polygons from TWDB, and GCD service-area boundaries from the
-district itself. `twdb_statewide` has no coordinate at all, deliberately:
-screening every basin is not a location, and a centroid would imply otherwise.
+What it deliberately does not contain is geometry. There are no basin boundary
+polygons, because this repository has not delineated any, and a hand-drawn
+outline would carry more authority than it earns. A real deployment should
+replace the point anchors with:
 
-Nothing geographic feeds the model. The map reads out numbers computed upstream,
-so a misplaced marker misleads a viewer but cannot bias a forecast.
+- **USGS Watershed Boundary Dataset (WBD)** HUC8/HUC12 polygons, distributed
+  through The National Map, for watershed boundaries;
+- **TWDB major river basin and major aquifer** shapefiles for the basin and
+  aquifer extents Texas water planning actually uses;
+- **USGS NHDPlus** flowlines for the river network, if reaches are to be drawn
+  rather than straight anchor-to-outlet lines;
+- gauge coordinates from USGS NWIS site metadata, once `usgs_site_no` is
+  populated in `config/basins.yaml`.
+
+The dashboard basemap is CARTO's vector style over OpenStreetMap data, served
+through pydeck's keyless `carto` provider, chosen because it needs no API key and
+so cannot break for a fresh clone. Attribution is rendered under the map. A Google
+Maps basemap would require a billed API key, which does not belong in a public
+repository.
+
+The map does not depend on those tiles alone. `data/geo/texas_state.geojson` is a
+vendored, generalised Texas state boundary (US Census cartographic boundary,
+public domain, ~150 vertices, provenance recorded inside the file) drawn as a deck layer, so the state and its Gulf
+coast are visible even when tiles are blocked by a proxy or the client cannot
+render them. Provenance is recorded in a `_provenance` key inside the file.
 
 ## Partner scales
 

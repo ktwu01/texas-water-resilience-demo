@@ -84,9 +84,13 @@ class Site:
         return self.basin_id is None
 
 
-def _read_yaml(path: Path) -> dict[str, Any]:
+def read_yaml(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
+
+
+# Retained so existing internal callers keep working.
+_read_yaml = read_yaml
 
 
 def load_basins(path: Path | None = None) -> list[Basin]:

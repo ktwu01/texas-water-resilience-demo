@@ -78,16 +78,31 @@ their Capture Index at zero forever and looked like a hydrologic finding rather
 than a configuration error. `pipeline.validate_site_feasibility()` now refuses to
 run such a configuration. That guard is worth keeping when real numbers go in.
 
-## 6. The map is a sketch of where, not a survey
+## 6. The map is not a delineation
 
-The state outline is real (US Census, public domain). Everything drawn on it is
-not. Each river basin appears as a single approximate point rather than the
-polygon it actually is, and the Rolling Plains district appears as one marker
-rather than the multi-county service area it covers. Marker positions were placed
-by eye, are recorded as `provenance: approximate` in `src/twr/geo.py`, and are
-wrong at the scale any operator would care about. The map answers "which part of
-Texas is this row about" and nothing finer. Reading a marker as a diversion point,
-a recharge site, or a gauge location would be a mistake.
+`config/geography.yaml` is the one config file whose numbers are real rather than
+synthetic: the coordinates are approximate public geography (river mouths, basin
+midpoints, and the towns the partner organisations sit in), rounded to about 0.1
+degrees. That makes the dashboard map roughly correct in position, and it is
+still not a geospatial product.
+
+- **There are no basin boundary polygons.** Basins are drawn as scaled point
+  markers, not filled watersheds, because this repository has never delineated a
+  watershed. A filled outline would look authoritative and would be invented.
+  Replace with USGS Watershed Boundary Dataset HUC polygons and TWDB major river
+  basin shapefiles before showing this to anyone who works in GIS.
+- **The one real polygon is the state outline** in `data/geo/texas_state.geojson`,
+  a generalised US Census cartographic boundary (~150 vertices, public domain). It
+  is there so the map reads as Texas even when basemap tiles do not load. Its Gulf
+  coastline is simplified and nothing should be measured from it.
+- **`centroid` is a hand-placed visual anchor**, not a computed area centroid,
+  and it is not the gauge location either. Nothing in the model uses it; it only
+  decides where a marker lands.
+- **The marker area encodes the Capture Index, not basin size.** A large circle
+  means a high index in a possibly small basin. Anyone reading it as drainage
+  area will read it backwards.
+- The site markers are placed at the partner's town. The infrastructure those
+  markers represent is still illustrative, per section 5.
 
 ## 7. Super-resolution is a stand-in
 

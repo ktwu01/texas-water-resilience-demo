@@ -22,15 +22,18 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 # populate the gitignored outputs/ directory on first request.
 sys.path.insert(1, str(REPO_ROOT))
 
-import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from basin_map import BASEMAP_ATTRIBUTION, basin_map  # noqa: E402
+
 from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
-from twr.geo import SITE_POINTS, locate_basins, marker_sizes, unlocated_basins  # noqa: E402
+from twr.geo import load_geography  # noqa: E402
 
-st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="~", layout="wide")
+st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="💧", layout="wide")
 
 DATE_COLUMNS = {
     "daily_timeseries.csv": ["date"],
@@ -76,6 +79,12 @@ def bootstrap_outputs() -> bool:
     return True
 
 
+@st.cache_resource(show_spinner=False)
+def geography():
+    """Map anchors. Cached as a resource because it is immutable and unhashable."""
+    return load_geography()
+
+
 def flag_badge(flag: str) -> str:
     color = FLAG_COLORS.get(flag, "#888888")
     return (
@@ -101,55 +110,37 @@ def show_flag_card(row: pd.Series) -> None:
     )
 
 
-def texas_map(statewide: pd.DataFrame, flags: pd.DataFrame) -> None:
-    """Statewide screening on a map of Texas.
-
-    Colour is the operational flag and radius is expected capturable volume, so
-    the map is a projection of the table below it and cannot tell a different
-    story. Locations are approximate placeholders; see `twr/geo.py`.
-    """
-    located = locate_basins(statewide).dropna(subset=["lat", "lon"])
-    if located.empty:
-        st.info("No basin has a coordinate on file, so there is nothing to map.")
+def show_basin_map(statewide: pd.DataFrame) -> None:
+    """Basemap of the screened basins, with a hover card per basin."""
+    show_coast = st.toggle(
+        "Trace outlets to the Gulf coast",
+        value=True,
+        help=(
+            "Draws each basin's approximate river mouth and the reach to it. There is "
+            "no separate Texas Coast decision unit in this demo, so the coast is shown "
+            "as a property of the basins that drain to it."
+        ),
+    )
+    deck, placed = basin_map(statewide, geography(), highlight_coastal=show_coast)
+    if deck is None:
+        st.info("No basin geometry matched the screening output.")
         return
 
-    radius = marker_sizes(
-        located.get("expected_capturable_af", pd.Series(0.0, index=located.index))
+    st.pydeck_chart(deck, width="stretch", height=520)
+    caption = (
+        "Hover a basin for its Capture Index, excess volume, and binding constraint. "
+        "Marker size scales with the Capture Index; colour is the flag. Dark markers "
+        "are the three decision units."
     )
-    basin_layer = pd.DataFrame(
-        {
-            "lat": located["lat"].to_numpy(float),
-            "lon": located["lon"].to_numpy(float),
-            # marker_sizes returns matplotlib point areas; rescale to map metres.
-            "radius_m": 6_000.0
-            + 54_000.0 * (radius - radius.min()) / max(float(np.ptp(radius)), 1e-9),
-            "color": [FLAG_COLORS.get(flag, "#888888") for flag in located["flag"]],
-        }
-    )
-
-    site_rows = []
-    for _, row in flags.iterrows():
-        point = SITE_POINTS.get(row["site_id"])
-        if point is not None:
-            site_rows.append(
-                {"lat": point[0], "lon": point[1], "radius_m": 9_000.0,
-                 "color": FLAG_COLORS.get(row["flag"], "#888888")}
-            )
-    layer = pd.concat([basin_layer, pd.DataFrame(site_rows)], ignore_index=True)
-
-    st.map(layer, latitude="lat", longitude="lon", size="radius_m", color="color")
+    missing = statewide["basin_id"].nunique() - placed
+    if missing > 0:
+        caption += f" {missing} screened basin(s) have no map anchor and are not drawn."
+    st.caption(caption)
     st.caption(
-        "Circle colour is the operational flag (same palette as the badges in the sidebar) "
-        "and radius is expected capturable volume. Basin markers are one approximate point "
-        "standing in for a whole basin, and the two smaller markers are the watershed and "
-        "facility decision units. "
-        "These are placeholder coordinates, not gauge locations. `twdb_statewide` has no "
-        "marker because it screens every basin rather than sitting anywhere."
+        "Markers are hand-placed anchors, not delineated watershed polygons: this demo "
+        "carries no basin boundaries, and drawing an invented outline would overstate "
+        f"what it knows. {BASEMAP_ATTRIBUTION}."
     )
-    missing = unlocated_basins(statewide)
-    if missing:
-        st.caption(f"No coordinate on file, absent from the map: `{', '.join(missing)}`")
-
 
 def flag_timeline(history: pd.DataFrame, site_id: str) -> None:
     """Capture Index over the replayed window, with the flag thresholds marked."""
@@ -201,7 +192,7 @@ def main() -> None:
         "**Synthetic demonstration data.** Every value here is simulated. Nothing on this "
         "page is an observation, a forecast, or an endorsement by NASA, TWDB, or any named "
         "partner. Infrastructure capacities are illustrative placeholders, and the map "
-        "markers are approximate placeholder locations rather than gauge coordinates.",
+        "markers are hand-placed anchors rather than delineated watersheds.",
         # Streamlit validates this as a single emoji and raises on anything else,
         # which took the whole page down when it was the string "!".
         icon="⚠️",
@@ -227,10 +218,11 @@ def main() -> None:
     # --- scale 1 ---------------------------------------------------------
     with state_tab:
         st.subheader("Where in Texas is high-magnitude flow capturable this week?")
+
         if statewide.empty:
             st.info("No statewide screening output.")
         else:
-            texas_map(statewide, flags)
+            show_basin_map(statewide)
             display = statewide[
                 ["basin_name", "flag", "capture_index", "binding_constraint",
                  "binding_if_captured", "median_excess_af", "q90_excess_af",

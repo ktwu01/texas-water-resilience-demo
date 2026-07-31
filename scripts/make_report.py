@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Render a static HTML briefing from outputs/.
 
-This is the offline twin of the Streamlit dashboard: same numbers, same flag
-system, no server and no extra dependencies. Run scripts/run_pipeline.py first.
+The serverless twin of the Streamlit dashboard: same numbers, same flag system,
+same basin map. The map is the dashboard's own pydeck deck exported with
+to_html(), so it stays interactive and hoverable in a page with no server behind
+it, and there is one map implementation rather than two that drift.
+
+Run scripts/run_pipeline.py first.
 
     python scripts/make_report.py
 """
@@ -22,18 +26,41 @@ import pandas as pd  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
+# The basin map is shared with the dashboard rather than reimplemented here. Same
+# deck, same hover cards, same anchors; pydeck can export a deck as a standalone
+# HTML file, so the published page gets the interactive map and not a screenshot
+# of one.
+sys.path.insert(1, str(REPO_ROOT / "dashboard"))
+
+from basin_map import BASEMAP_ATTRIBUTION, basin_map  # noqa: E402
 
 from twr.capture_index import FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
-from twr.geo import render_texas_map, unlocated_basins  # noqa: E402
+from twr.geo import load_geography  # noqa: E402
 
+MAP_FILENAME = "basin_map.html"
+
+# Dark, to match the dashboard. A white figure dropped into a dark page reads as
+# a hole punched in it.
+INK = "#c9d1d9"
+PAPER = "#0d1117"
 PLOT_STYLE = {
     "figure.dpi": 130,
     "font.size": 9,
     "axes.spines.top": False,
     "axes.spines.right": False,
     "axes.grid": True,
-    "grid.alpha": 0.25,
+    "grid.alpha": 0.18,
+    "figure.facecolor": PAPER,
+    "axes.facecolor": PAPER,
+    "savefig.facecolor": PAPER,
+    "text.color": INK,
+    "axes.labelcolor": INK,
+    "axes.edgecolor": "#30363d",
+    "xtick.color": INK,
+    "ytick.color": INK,
+    "grid.color": "#30363d",
+    "legend.labelcolor": INK,
 }
 
 
@@ -138,22 +165,43 @@ def _flag_cards(flags: pd.DataFrame) -> str:
     return "\n".join(cards)
 
 
-def _map_caveat(statewide: pd.DataFrame) -> str:
-    """State the map's provenance in the page, not just in the figure margin."""
-    missing = unlocated_basins(statewide)
-    note = (
-        "<p class=\"action\">The state outline is a real US Census cartographic boundary. "
-        "The markers are not: each basin is a polygon reduced to one approximate "
-        "placeholder point, and the district marker stands in for a multi-county service "
-        "area. Replace with USGS gauge coordinates and TWDB basin boundaries before this "
-        "is shown to an operator.</p>"
+def _basin_map(statewide: pd.DataFrame, output_dir: Path) -> tuple[str, str]:
+    """Export the dashboard's deck as a standalone page and embed it in an iframe.
+
+    Returns (embed_html, caveat_html), both empty if there is nothing to draw. The
+    deck is iframed rather than inlined because pydeck emits a whole document,
+    scripts and all, and splicing that into this page's <body> would put two
+    competing <head>s in one file.
+    """
+    if statewide.empty:
+        return "", ""
+    deck, placed = basin_map(statewide, load_geography(), highlight_coastal=True)
+    if deck is None:
+        return "", ""
+
+    deck.to_html(str(output_dir / MAP_FILENAME), open_browser=False, notebook_display=False)
+    embed = (
+        f'<iframe class="map" src="{MAP_FILENAME}" title="Basin map" loading="lazy"></iframe>'
     )
-    if missing:
-        note += (
-            f"<p class=\"action\">Not on the map, no coordinate on file: "
-            f"<code>{', '.join(missing)}</code>. Those rows are in the table below.</p>"
+
+    caveat = (
+        '<p class="note">Hover a basin for its Capture Index, excess volume, and binding '
+        "constraint. Marker size scales with the Capture Index, not with basin area, and "
+        "colour is the flag. The pale markers are the three decision units, and the thin "
+        "lines trace each basin to its approximate river mouth.</p>"
+        '<p class="note">Markers are hand-placed anchors, not delineated watersheds: this '
+        "demo carries no basin boundaries, and an invented outline would overstate what it "
+        f"knows. The state polygon is a generalised US Census boundary. {BASEMAP_ATTRIBUTION}. "
+        "The map needs WebGL and network access for the basemap tiles; the state outline is "
+        "part of the deck, so Texas still draws without them.</p>"
+    )
+    unplaced = statewide["basin_id"].nunique() - placed
+    if unplaced > 0:
+        caveat += (
+            f'<p class="note">{unplaced} screened basin(s) have no map anchor and are not '
+            "drawn. They are still in the table below.</p>"
         )
-    return note
+    return embed, caveat
 
 
 def _table_html(frame: pd.DataFrame, columns: list[str], float_fmt: str = "%.3f") -> str:
@@ -167,28 +215,44 @@ TEMPLATE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <title>Texas HMF Capture Briefing (demo)</title>
 <style>
-  body {{ font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0 auto;
-         max-width: 1000px; padding: 32px 24px 64px; color: #1c2126; line-height: 1.5; }}
-  h1 {{ font-size: 26px; margin-bottom: 4px; }}
-  h2 {{ font-size: 18px; margin-top: 36px; border-bottom: 1px solid #e3e7ea; padding-bottom: 6px; }}
-  .sub {{ color: #5b6670; margin-top: 0; }}
-  .banner {{ background: #fff4f4; border: 1px solid #e7bcbc; padding: 12px 16px; border-radius: 6px;
-             font-size: 13px; margin: 18px 0 8px; }}
-  .cards {{ display: flex; flex-wrap: wrap; gap: 14px; }}
-  .card {{ flex: 1 1 300px; background: #fafbfc; border: 1px solid #e3e7ea;
-           border-radius: 6px; padding: 14px 16px; }}
-  .flag {{ font-weight: 700; letter-spacing: 0.06em; font-size: 13px; }}
-  .site {{ font-size: 15px; font-weight: 600; margin-bottom: 8px; }}
+  :root {{ --bg: #0d1117; --panel: #161b22; --line: #30363d; --ink: #c9d1d9;
+           --bright: #f0f6fc; --dim: #8b949e; --accent: #58a6ff; }}
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         margin: 0 auto; max-width: 1080px; padding: 40px 24px 72px; background: var(--bg);
+         color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }}
+  h1 {{ font-size: 28px; margin-bottom: 4px; color: var(--bright); letter-spacing: -0.01em; }}
+  h2 {{ font-size: 17px; margin-top: 44px; color: var(--bright); text-transform: uppercase;
+        letter-spacing: 0.08em; border-bottom: 1px solid var(--line); padding-bottom: 8px; }}
+  a {{ color: var(--accent); }}
+  .sub {{ color: var(--dim); margin-top: 0; font-size: 14px; }}
+  .banner {{ background: rgba(210, 153, 34, 0.10); border: 1px solid rgba(210, 153, 34, 0.45);
+             border-radius: 8px; padding: 14px 18px; font-size: 13px; margin: 20px 0 8px; }}
+  .cards {{ display: grid; gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); }}
+  .card {{ background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+           padding: 16px 18px; }}
+  .flag {{ font-weight: 700; letter-spacing: 0.08em; font-size: 12px; }}
+  .site {{ font-size: 15px; font-weight: 600; margin-bottom: 10px; color: var(--bright); }}
   .card table {{ width: 100%; font-size: 12.5px; }}
-  .card td:last-child {{ text-align: right; }}
-  .action {{ font-size: 12px; color: #48525b; margin: 10px 0 0; }}
-  table {{ border-collapse: collapse; font-size: 13px; }}
-  th, td {{ padding: 5px 10px; text-align: left; }}
-  thead th {{ border-bottom: 1px solid #ccd3d8; }}
-  tbody tr:nth-child(even) {{ background: #f7f9fa; }}
-  img {{ max-width: 100%; margin: 12px 0; }}
-  code {{ background: #eef1f3; padding: 1px 5px; border-radius: 3px; font-size: 12px; }}
-  footer {{ margin-top: 48px; font-size: 12px; color: #6b757e; }}
+  .card td {{ padding: 3px 0; border: 0; }}
+  .card td:last-child {{ text-align: right; color: var(--bright); }}
+  .action {{ font-size: 12px; color: var(--dim); margin: 12px 0 0; }}
+  .note {{ font-size: 12.5px; color: var(--dim); margin: 10px 0 0; }}
+  .map {{ width: 100%; height: 560px; border: 1px solid var(--line); border-radius: 10px;
+          margin: 14px 0 6px; background: var(--panel); }}
+  table {{ border-collapse: collapse; font-size: 13px; width: 100%;
+           background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }}
+  th, td {{ padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--line); }}
+  thead th {{ color: var(--dim); font-weight: 600; font-size: 11.5px; text-transform: uppercase;
+              letter-spacing: 0.06em; }}
+  tbody tr:last-child td {{ border-bottom: 0; }}
+  tbody tr:hover {{ background: rgba(88, 166, 255, 0.06); }}
+  img {{ max-width: 100%; margin: 14px 0; border-radius: 10px; border: 1px solid var(--line); }}
+  code {{ background: rgba(110, 118, 129, 0.2); padding: 1px 6px; border-radius: 4px;
+          font-size: 12px; color: var(--bright); }}
+  footer {{ margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
+            font-size: 12px; color: var(--dim); }}
 </style></head><body>
 <h1>From Floods to Droughts: HMF Capture Briefing</h1>
 <p class="sub">Demo artefact, generated by <code>scripts/make_report.py</code>. Forecast window:
@@ -197,8 +261,8 @@ TEMPLATE = """<!doctype html>
 <div class="banner"><b>Synthetic data.</b> Every number on this page comes from a stochastic
 simulator in <code>twr/synth.py</code>. Nothing here is an observation, a forecast, or an
 endorsement by NASA, TWDB, or any named partner. Infrastructure capacities are illustrative
-placeholders, and the map markers are approximate placeholder locations rather than gauge
-coordinates. If you reached this page by a link rather than by cloning the repository, read
+placeholders, and the map markers are hand-placed anchors rather than delineated watersheds.
+If you reached this page by a link rather than by cloning the repository, read
 <a href="https://github.com/ktwu01/texas-water-resilience-demo/blob/main/docs/LIMITATIONS.md">
 LIMITATIONS.md</a> before quoting anything on it.</div>
 
@@ -208,7 +272,7 @@ LIMITATIONS.md</a> before quoting anything on it.</div>
 </div>
 
 <h2>Scale 1: statewide screening (TWDB)</h2>
-{map_img}
+{map_embed}
 {map_caveat}
 {screening_img}
 {screening_table}
@@ -275,8 +339,9 @@ def build_report(output_dir: Path, max_hydrographs: int = 2) -> Path:
     importance = _read("feature_importance.csv")
     cv = _read("spatial_cv_folds.csv")
 
+    map_embed, map_caveat = _basin_map(statewide, output_dir)
+
     with plt.rc_context(PLOT_STYLE):
-        map_png = render_texas_map(statewide, figures / "texas_map.png", site_flags=flags)
         screening_png = _screening_chart(statewide, figures)
         storage_png = _storage_chart(storage, figures)
         hydro_pngs = []
@@ -312,8 +377,8 @@ def build_report(output_dir: Path, max_hydrographs: int = 2) -> Path:
         horizon=summary.get("horizon_days", "n/a"),
         as_of=summary.get("as_of", "n/a"),
         cards=_flag_cards(flags) if not flags.empty else "<p>No assessments.</p>",
-        map_img=_img(map_png),
-        map_caveat=_map_caveat(statewide) if map_png else "",
+        map_embed=map_embed,
+        map_caveat=map_caveat,
         screening_img=_img(screening_png),
         screening_table=_table_html(
             statewide,
