@@ -25,6 +25,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from twr.capture_index import FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
+from twr.geo import render_texas_map, unlocated_basins  # noqa: E402
 
 PLOT_STYLE = {
     "figure.dpi": 130,
@@ -137,6 +138,24 @@ def _flag_cards(flags: pd.DataFrame) -> str:
     return "\n".join(cards)
 
 
+def _map_caveat(statewide: pd.DataFrame) -> str:
+    """State the map's provenance in the page, not just in the figure margin."""
+    missing = unlocated_basins(statewide)
+    note = (
+        "<p class=\"action\">The state outline is a real US Census cartographic boundary. "
+        "The markers are not: each basin is a polygon reduced to one approximate "
+        "placeholder point, and the district marker stands in for a multi-county service "
+        "area. Replace with USGS gauge coordinates and TWDB basin boundaries before this "
+        "is shown to an operator.</p>"
+    )
+    if missing:
+        note += (
+            f"<p class=\"action\">Not on the map, no coordinate on file: "
+            f"<code>{', '.join(missing)}</code>. Those rows are in the table below.</p>"
+        )
+    return note
+
+
 def _table_html(frame: pd.DataFrame, columns: list[str], float_fmt: str = "%.3f") -> str:
     available = [column for column in columns if column in frame.columns]
     if not available:
@@ -178,7 +197,10 @@ TEMPLATE = """<!doctype html>
 <div class="banner"><b>Synthetic data.</b> Every number on this page comes from a stochastic
 simulator in <code>twr/synth.py</code>. Nothing here is an observation, a forecast, or an
 endorsement by NASA, TWDB, or any named partner. Infrastructure capacities are illustrative
-placeholders.</div>
+placeholders, and the map markers are approximate placeholder locations rather than gauge
+coordinates. If you reached this page by a link rather than by cloning the repository, read
+<a href="https://github.com/ktwu01/texas-water-resilience-demo/blob/main/docs/LIMITATIONS.md">
+LIMITATIONS.md</a> before quoting anything on it.</div>
 
 <h2>Operational flags by scale</h2>
 <div class="cards">
@@ -186,6 +208,8 @@ placeholders.</div>
 </div>
 
 <h2>Scale 1: statewide screening (TWDB)</h2>
+{map_img}
+{map_caveat}
 {screening_img}
 {screening_table}
 <p><code>binding_constraint</code> is what limits the planning case and is what makes a row
@@ -252,6 +276,7 @@ def build_report(output_dir: Path, max_hydrographs: int = 2) -> Path:
     cv = _read("spatial_cv_folds.csv")
 
     with plt.rc_context(PLOT_STYLE):
+        map_png = render_texas_map(statewide, figures / "texas_map.png", site_flags=flags)
         screening_png = _screening_chart(statewide, figures)
         storage_png = _storage_chart(storage, figures)
         hydro_pngs = []
@@ -287,6 +312,8 @@ def build_report(output_dir: Path, max_hydrographs: int = 2) -> Path:
         horizon=summary.get("horizon_days", "n/a"),
         as_of=summary.get("as_of", "n/a"),
         cards=_flag_cards(flags) if not flags.empty else "<p>No assessments.</p>",
+        map_img=_img(map_png),
+        map_caveat=_map_caveat(statewide) if map_png else "",
         screening_img=_img(screening_png),
         screening_table=_table_html(
             statewide,

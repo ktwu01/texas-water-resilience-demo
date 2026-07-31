@@ -78,7 +78,18 @@ their Capture Index at zero forever and looked like a hydrologic finding rather
 than a configuration error. `pipeline.validate_site_feasibility()` now refuses to
 run such a configuration. That guard is worth keeping when real numbers go in.
 
-## 6. Super-resolution is a stand-in
+## 6. The map is a sketch of where, not a survey
+
+The state outline is real (US Census, public domain). Everything drawn on it is
+not. Each river basin appears as a single approximate point rather than the
+polygon it actually is, and the Rolling Plains district appears as one marker
+rather than the multi-county service area it covers. Marker positions were placed
+by eye, are recorded as `provenance: approximate` in `src/twr/geo.py`, and are
+wrong at the scale any operator would care about. The map answers "which part of
+Texas is this row about" and nothing finer. Reading a marker as a diversion point,
+a recharge site, or a gauge location would be a mistake.
+
+## 7. Super-resolution is a stand-in
 
 `twr/downscale.py` is a ridge regression on patch features, not a CNN. It beats
 bilinear interpolation on synthetic fields whose fine structure is a
@@ -88,7 +99,7 @@ downscaling of real precipitation, where fine structure is far less predictable
 and the evaluation must be done on held-out storms and extremes rather than
 pooled RMSE.
 
-## 7. The aquifer is one bucket
+## 8. The aquifer is one bucket
 
 A lumped storage bucket with seasonal recovery. No spatial distribution of
 recharge, no travel time from a recharge basin to a recovery well, no water
@@ -96,7 +107,7 @@ quality, no clogging, no aquifer heterogeneity, no interference between wells.
 Recoverability is not the same as storage, and this module does not distinguish
 them. ASR feasibility in practice often turns on exactly those omissions.
 
-## 8. ARL claims
+## 9. ARL claims
 
 The proposal targets movement from ARL 2 to ARL 6, where ARL 6 means validation
 in a relevant operational environment with stakeholders. **This repository is

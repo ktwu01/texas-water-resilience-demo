@@ -79,6 +79,30 @@ Replacing them means sourcing:
 - aquifer storage capacity and recovery limits from the relevant groundwater
   availability model.
 
+## Geography
+
+`data/geo/texas_boundary.json` is the only real dataset in the repository. It is
+the Texas polygon from the US Census Bureau 2022 cartographic boundary files at
+1:20,000,000 (`cb_2022_us_state_20m`), simplified with Douglas-Peucker at 0.01
+degrees, exterior rings only. Census products are in the public domain. It is
+cartographic, not survey grade, and it is used for exactly one purpose: telling a
+viewer which part of the state a table row refers to. The file records its own
+source, URL, licence, and coordinate order, and a test asserts those fields are
+present so the provenance cannot quietly rot into an uncited blob.
+
+The point locations in `src/twr/geo.py` are **not** real. `BASIN_POINTS` reduces
+each basin to one coordinate placed by eye near the mid-basin reach the synthetic
+gauge is meant to evoke, and `SITE_POINTS` puts a multi-county groundwater
+district and a city ASR facility at single approximate points. They carry
+`provenance: approximate` for the same reason the infrastructure numbers carry
+`illustrative`. Replacing them means sourcing gauge coordinates from USGS NWIS,
+major river basin polygons from TWDB, and GCD service-area boundaries from the
+district itself. `twdb_statewide` has no coordinate at all, deliberately:
+screening every basin is not a location, and a centroid would imply otherwise.
+
+Nothing geographic feeds the model. The map reads out numbers computed upstream,
+so a misplaced marker misleads a viewer but cannot bias a forecast.
+
 ## Partner scales
 
 The three nested scales in `config/sites.yaml` name the Texas Water Development

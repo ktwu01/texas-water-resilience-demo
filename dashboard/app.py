@@ -19,11 +19,13 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import streamlit as st  # noqa: E402
 
 from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa: E402
 from twr.config import OUTPUT_DIR  # noqa: E402
+from twr.geo import SITE_POINTS, locate_basins, marker_sizes, unlocated_basins  # noqa: E402
 
 st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="~", layout="wide")
 
@@ -73,6 +75,56 @@ def show_flag_card(row: pd.Series) -> None:
     )
 
 
+def texas_map(statewide: pd.DataFrame, flags: pd.DataFrame) -> None:
+    """Statewide screening on a map of Texas.
+
+    Colour is the operational flag and radius is expected capturable volume, so
+    the map is a projection of the table below it and cannot tell a different
+    story. Locations are approximate placeholders; see `twr/geo.py`.
+    """
+    located = locate_basins(statewide).dropna(subset=["lat", "lon"])
+    if located.empty:
+        st.info("No basin has a coordinate on file, so there is nothing to map.")
+        return
+
+    radius = marker_sizes(
+        located.get("expected_capturable_af", pd.Series(0.0, index=located.index))
+    )
+    basin_layer = pd.DataFrame(
+        {
+            "lat": located["lat"].to_numpy(float),
+            "lon": located["lon"].to_numpy(float),
+            # marker_sizes returns matplotlib point areas; rescale to map metres.
+            "radius_m": 6_000.0
+            + 54_000.0 * (radius - radius.min()) / max(float(np.ptp(radius)), 1e-9),
+            "color": [FLAG_COLORS.get(flag, "#888888") for flag in located["flag"]],
+        }
+    )
+
+    site_rows = []
+    for _, row in flags.iterrows():
+        point = SITE_POINTS.get(row["site_id"])
+        if point is not None:
+            site_rows.append(
+                {"lat": point[0], "lon": point[1], "radius_m": 9_000.0,
+                 "color": FLAG_COLORS.get(row["flag"], "#888888")}
+            )
+    layer = pd.concat([basin_layer, pd.DataFrame(site_rows)], ignore_index=True)
+
+    st.map(layer, latitude="lat", longitude="lon", size="radius_m", color="color")
+    st.caption(
+        "Circle colour is the operational flag (same palette as the badges in the sidebar) "
+        "and radius is expected capturable volume. Basin markers are one approximate point "
+        "standing in for a whole basin, and the two smaller markers are the watershed and "
+        "facility decision units. "
+        "These are placeholder coordinates, not gauge locations. `twdb_statewide` has no "
+        "marker because it screens every basin rather than sitting anywhere."
+    )
+    missing = unlocated_basins(statewide)
+    if missing:
+        st.caption(f"No coordinate on file, absent from the map: `{', '.join(missing)}`")
+
+
 def flag_timeline(history: pd.DataFrame, site_id: str) -> None:
     """Capture Index over the replayed window, with the flag thresholds marked."""
     group = history[history["site_id"] == site_id]
@@ -115,7 +167,8 @@ def main() -> None:
     st.warning(
         "**Synthetic demonstration data.** Every value here is simulated. Nothing on this "
         "page is an observation, a forecast, or an endorsement by NASA, TWDB, or any named "
-        "partner. Infrastructure capacities are illustrative placeholders.",
+        "partner. Infrastructure capacities are illustrative placeholders, and the map "
+        "markers are approximate placeholder locations rather than gauge coordinates.",
         icon="!",
     )
 
@@ -142,6 +195,7 @@ def main() -> None:
         if statewide.empty:
             st.info("No statewide screening output.")
         else:
+            texas_map(statewide, flags)
             display = statewide[
                 ["basin_name", "flag", "capture_index", "binding_constraint",
                  "binding_if_captured", "median_excess_af", "q90_excess_af",
