@@ -33,6 +33,7 @@ from twr.capture_index import FLAG_ACTIONS, FLAG_COLORS, FLAG_THRESHOLDS  # noqa
 from twr.config import OUTPUT_DIR  # noqa: E402
 from twr.geo import load_geography  # noqa: E402
 from twr.map_svg import basin_map_svg, size_legend_svg  # noqa: E402
+from twr.published import fetch_published  # noqa: E402
 
 st.set_page_config(page_title="Texas HMF Capture (demo)", page_icon="💧", layout="wide")
 
@@ -57,33 +58,56 @@ def load_summary() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-@st.cache_resource(show_spinner="First run on this server: generating the synthetic record.")
-def bootstrap_outputs() -> bool:
-    """Populate outputs/ on a fresh server, once.
+@st.cache_resource(show_spinner="Fetching the published outputs.")
+def bootstrap_outputs() -> str:
+    """Populate outputs/ on a fresh server, once. Returns where the data came from.
 
-    outputs/ is gitignored, so a hosted deployment (Streamlit Community Cloud,
-    Hugging Face Spaces) starts with an empty directory. Rather than commit
-    synthetic CSVs, generate them on first request and cache the fact with
-    ``cache_resource`` so concurrent viewers share one run instead of racing to
-    write the same files. Returns False if generation failed, leaving the caller
-    to show the manual instructions.
+    outputs/ is gitignored, so a hosted deployment starts with an empty
+    directory. This used to run the full pipeline on first request, which is
+    about two and a half minutes of scikit-learn and got the hosted app CPU
+    throttled. CI already runs that pipeline on every push and publishes the
+    CSVs, so download them instead: seconds, no CPU, and the dashboard then shows
+    byte-identical numbers to the published briefing.
+
+    Falls back to a local `--fast` run when the download fails, so a fresh clone
+    with no network still works. `--fast` and not `--scenario`: a fallback that
+    costs minutes of CPU is how this went wrong the first time. The
+    cross-validation and scenario tabs show their own empty states in that case.
     """
+    result = fetch_published(OUTPUT_DIR)
+    if result.usable:
+        load.clear()
+        load_summary.clear()
+        return "published" if result.base != "local" else "local"
+
     from scripts.run_pipeline import main as run_pipeline
 
+    st.session_state["fetch_missing"] = result.missing
     try:
-        run_pipeline(["--scenario"])
+        run_pipeline(["--fast"])
     except Exception as error:  # surfaced in the UI below, not swallowed
         st.session_state["bootstrap_error"] = repr(error)
-        return False
+        return "failed"
     load.clear()
     load_summary.clear()
-    return True
+    return "computed"
 
 
 @st.cache_resource(show_spinner=False)
 def geography():
     """Map anchors. Cached as a resource because it is immutable and unhashable."""
     return load_geography()
+
+
+def has_columns(frame: pd.DataFrame, *columns: str) -> bool:
+    """True when the frame is populated and carries every column named.
+
+    `load` returns an empty frame for a file that is not there, and an empty
+    frame has no columns, so `frame["basin_id"]` raises KeyError and takes the
+    whole page down over one absent CSV. That is reachable now that a hosted
+    deployment fetches published artefacts and may get only some of them.
+    """
+    return not frame.empty and all(column in frame.columns for column in columns)
 
 
 def flag_badge(flag: str) -> str:
@@ -172,6 +196,9 @@ def show_basin_map(statewide: pd.DataFrame) -> None:
 
 def flag_timeline(history: pd.DataFrame, site_id: str) -> None:
     """Capture Index over the replayed window, with the flag thresholds marked."""
+    if not has_columns(history, "site_id", "capture_index", "basin_id", "flag"):
+        st.info("No replay history available.")
+        return
     group = history[history["site_id"] == site_id]
     if group.empty:
         st.info("No replay history for this site.")
@@ -193,20 +220,48 @@ def flag_timeline(history: pd.DataFrame, site_id: str) -> None:
         column.caption(f"{count} of {len(group)} days")
 
 
+def data_provenance(source: str) -> None:
+    """Say where the numbers on the page came from, in one line.
+
+    Three different paths can populate outputs/, and they do not all produce the
+    same thing: the published bundle carries the full run, a local fallback run
+    is `--fast` and has no cross-validation. A viewer comparing this page to the
+    static briefing deserves to know which one they are looking at.
+    """
+    notes = {
+        "published": (
+            "Data: the published run, downloaded from the static briefing. Same "
+            "artefacts, byte for byte, computed once in CI."
+        ),
+        "local": "Data: the local `outputs/` directory.",
+        "computed": (
+            "Data: computed here with `--fast`, because the published copy could not "
+            "be fetched. Small ensemble, no cross-validation, so the Trustworthy AI "
+            "tab is thin."
+        ),
+    }
+    note = notes.get(source)
+    if note:
+        st.caption(note)
+
+
 def main() -> None:
     flags = load("site_flags.csv")
+    source = "local"
     if flags.empty:
-        bootstrap_outputs()
+        source = bootstrap_outputs()
         flags = load("site_flags.csv")
     if flags.empty:
         st.error(
-            "No outputs found and the pipeline could not be run here. Run "
+            "No outputs found, the published copy could not be fetched, and the "
+            "pipeline could not be run here. Run "
             "`python scripts/run_pipeline.py --scenario` first, which writes to "
             f"{OUTPUT_DIR}."
         )
-        error = st.session_state.get("bootstrap_error")
-        if error:
-            st.code(error)
+        for key in ("fetch_missing", "bootstrap_error"):
+            detail = st.session_state.get(key)
+            if detail:
+                st.code(detail)
         st.stop()
     summary = load_summary()
 
@@ -283,7 +338,11 @@ def main() -> None:
                 show_flag_card(record)
             with right:
                 basin = record["basin_id"]
-                group = timeseries[timeseries["basin_id"] == basin].set_index("date")
+                group = (
+                    timeseries[timeseries["basin_id"] == basin].set_index("date")
+                    if has_columns(timeseries, "basin_id", "date")
+                    else pd.DataFrame()
+                )
                 if not group.empty:
                     st.markdown("**Discharge and HMF threshold**")
                     st.line_chart(group[["flow_cfs", "hmf_threshold_cfs"]], height=200)
@@ -303,7 +362,11 @@ def main() -> None:
             with left:
                 show_flag_card(record)
             with right:
-                group = storage[storage["site_id"] == "facility_asr"].set_index("date")
+                group = (
+                    storage[storage["site_id"] == "facility_asr"].set_index("date")
+                    if has_columns(storage, "site_id", "date")
+                    else pd.DataFrame()
+                )
                 if not group.empty:
                     st.markdown("**Aquifer storage state**")
                     st.area_chart(group[["storage_fraction"]], height=200)
@@ -341,7 +404,7 @@ def main() -> None:
         else:
             st.markdown("**Leave-one-basin-out cross-validation**")
             st.dataframe(cv, width="stretch", hide_index=True)
-            picp = cv["picp_80"].mean()
+            picp = cv["picp_80"].mean() if "picp_80" in cv.columns else float("nan")
             st.metric("Mean coverage of the nominal 80% interval", f"{picp:.0%}")
             st.caption(
                 "Each row holds out an entire basin, which is the relevant test for transfer "
@@ -355,7 +418,7 @@ def main() -> None:
             st.markdown("**Permutation importance (volume head, log space)**")
             st.bar_chart(importance.set_index("feature")["mse_increase"].head(10))
 
-        if not history.empty and "mass_balance_clipped_fraction" in history.columns:
+        if has_columns(history, "mass_balance_clipped_fraction"):
             clipped = history["mass_balance_clipped_fraction"].mean()
             st.metric("Predictive samples clipped by the mass-balance bound", f"{clipped:.1%}")
             st.caption(
@@ -381,6 +444,7 @@ def main() -> None:
             )
 
     with st.sidebar:
+        data_provenance(source)
         st.header("Flag system")
         for flag, action in FLAG_ACTIONS.items():
             st.markdown(flag_badge(flag), unsafe_allow_html=True)

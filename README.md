@@ -58,9 +58,17 @@ deck renders nothing.
 `make demo` does the fast path end to end. `make test` runs the test suite in
 about 20 seconds.
 
-To publish either view for free, see [`docs/DEPLOY.md`](docs/DEPLOY.md):
-GitHub Pages for the static briefing, Streamlit Community Cloud for the
-dashboard. `make site` builds locally exactly what Pages publishes.
+Both views are live and free to host:
+
+- **Static briefing:** <https://koutian.is-a.dev/texas-water-resilience-demo/>
+  (GitHub Pages, rebuilt from a fixed seed on every push, always on)
+- **Dashboard:** <https://texas-water-resilience-demo.streamlit.app/>
+  (Streamlit Community Cloud, sleeps when idle, wakes on visit)
+
+The hosted dashboard downloads the CSVs the briefing publishes rather than
+recomputing them, so both show the same numbers and neither burns CPU on a free
+tier. See [`docs/DEPLOY.md`](docs/DEPLOY.md). `make site` builds locally exactly
+what Pages publishes.
 
 Everything is deterministic: same seed, same numbers, on any machine.
 

@@ -15,16 +15,15 @@ Link the static page by default. It cannot break, cannot sleep, and loads on a
 phone on a conference wifi. Link the dashboard when someone wants to move the
 scenario sliders.
 
-## Prerequisite: the repository must be public
+## Live
 
-GitHub Pages on a **private** repository requires a paid plan (Pro, Team, or
-Enterprise). On the free plan the site simply will not publish. This repository
-is currently private, so making it public is step zero. Nothing in it is
-sensitive by design (all data is synthetic, all capacities are placeholders),
-but that is a decision for the PI, not for the build.
+- Static briefing: <https://koutian.is-a.dev/texas-water-resilience-demo/>
+- Dashboard: <https://texas-water-resilience-demo.streamlit.app/>
 
-Streamlit Community Cloud can deploy from a private repository on the free tier,
-so if the repository must stay private, the dashboard alone is still an option.
+The repository is public, which GitHub Pages requires on the free plan (Pages on
+a private repository needs a paid plan). Streamlit Community Cloud will deploy
+from a private repository on the free tier, so the dashboard alone would still
+have been possible either way.
 
 ## GitHub Pages
 
@@ -70,15 +69,31 @@ point of publishing them.
    `requirements.txt`, which is why `streamlit` is uncommented there rather
    than left as a `pyproject.toml` extra.
 
-`outputs/` is gitignored, so the hosted app starts with nothing to read.
-`bootstrap_outputs()` in `dashboard/app.py` handles that: on the first request it
-runs the full pipeline once, caches the result with `st.cache_resource` so
-concurrent viewers share one run, and then the app behaves exactly as it does
-locally. Expect the first page load on a cold server to take a couple of minutes
-and every later one to be instant.
+After changing anything the app reads, use **Reboot app** in the Streamlit Cloud
+console. It does not redeploy on every push by itself, and a throttled or sleeping
+container keeps serving the code it booted with.
 
-If the app wakes from sleep it re-runs that bootstrap, since the container's
-filesystem does not survive.
+`outputs/` is gitignored, so the hosted app starts with nothing to read.
+`bootstrap_outputs()` in `dashboard/app.py` downloads the CSVs that CI already
+published next to the static briefing (`twr/published.py`), which takes seconds
+and no CPU. The dashboard and the published page then show byte-identical
+numbers, because they are the same artefacts from the same run.
+
+**Do not make the hosted app compute the pipeline.** The first version ran
+`run_pipeline(["--scenario"])` on first request: leave-one-basin-out
+cross-validation plus a scenario sweep, roughly two and a half minutes of
+scikit-learn. Streamlit Community Cloud CPU-throttled the app for it, which is
+the correct response from their side. If the download fails the app falls back to
+a local `--fast` run, not `--scenario`, and says so in the sidebar; the
+cross-validation and scenario tabs then show their own empty states.
+
+A consequence worth knowing: a partial download is a normal state, so every tab
+has to tolerate a missing CSV. `has_columns()` exists for that, and the
+dashboard shows an empty state per panel rather than failing the page.
+
+The app sleeps after about a week idle and re-runs that bootstrap on wake, since
+the container filesystem does not survive. Waking is a download, not a
+computation.
 
 ### Hugging Face Spaces, as an alternative
 

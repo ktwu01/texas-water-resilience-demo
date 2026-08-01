@@ -37,6 +37,9 @@ DATA_FILES = (
     "feature_importance.csv",
     "asr_scenario_sweep.csv",
     "storage_balance.csv",
+    # Published so the hosted dashboard can read the pipeline's output instead of
+    # recomputing it. See twr/published.py: recomputing got the app throttled.
+    "daily_timeseries.csv",
     "run_summary.json",
 )
 
